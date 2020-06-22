@@ -1,3 +1,4 @@
+'''Miscellanous functions that pwntools may/maynot already have'''
 from pwn import *
 from re import findall, search
 def offset_to_regex(v: int) -> str: return '.*' + hex(v)[2:] + '$'

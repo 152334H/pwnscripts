@@ -1,3 +1,4 @@
+'''For anything that has to do with FSBs'''
 from pwnscripts.string_checks import *
 from typing import Generator
 PWNSCRIPT_PRINTF_MIN = 5

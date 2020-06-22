@@ -1,4 +1,4 @@
-from string_checks import *
+from pwnscripts.string_checks import *
 from typing import Generator
 PWNSCRIPT_PRINTF_MIN = 5
 PWNSCRIPT_PRINTF_MAX = 35

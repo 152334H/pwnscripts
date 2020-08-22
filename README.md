@@ -70,6 +70,8 @@ File in an [issue](https://github.com/152334H/pwnscripts/issues), if you can. Wi
 
 Added a wrapper object for libc-database: the `libc_db` object. This is mostly a reinvention of tools like `LibcSearcher`, although I have yet to see another project tack on `one_gadget` searching, which is a (hacky) feature added for `libc_db`.
 
+Minor adjustments to *printf*. Logging is suppressed for offset bruteforcing; new feature to make a leak payload.
+
 Extended readme.
 
 20-06

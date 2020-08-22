@@ -20,3 +20,8 @@ def is_libc_address(v: int) -> bool:
     '''Heuristic for _potential_ libc addresses'''
     regex = '0x7f.*' if context.arch == 'amd64' else '0xf7.*'
     return v > 0 and search(regex, hex(v)) and not is_stack_address(v)
+def is_base_address(v: int) -> bool:
+    '''Heuristic for _potential_ base addresses'''
+    regex = '.*000$'    # generic, TODO to check reasonable-ness
+    return v > 0 and search(regex, hex(v))
+

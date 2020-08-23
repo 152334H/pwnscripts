@@ -8,7 +8,7 @@ def extract_first_bytes(s: bytes, n: int) -> int:
 def extract_all_bytes(s: bytes, n: int) -> list:
     ''' Extract a list of unpacked bytes of length `n` from a bytestring
     Note that the list will truncate the bytestring to be divisible by `s`'''
-    return (unpack(s[i:i+n], n*8) for i in range(len(s)//n))
+    return (unpack(s[i*n:i*n+n], n*8) for i in range(len(s)//n))
 def extract_all_hex(s: bytes) -> list:
     try: return list(map(lambda l: int(l,16), findall(b'0x[0-9a-f]+', s)))
     except IndexError: return []

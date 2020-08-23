@@ -66,7 +66,10 @@ def find_printf_offset_code(resp) -> int:
 def find_printf_offset_canary(resp) -> int:
     '''heuristic to find canary'''
     return resp % 0x100 == 0 and b'\x00' not in pack[context.arch](resp)[1:] and (context.arch == 'amd64' or (lambda b: b < 0xf0 and b != 0x08)(pack[context.arch](resp)[3]))
-
+@_find_printf_offset_sendprintf
+def find_printf_offset_stack(resp) -> int:
+    if context.arch != 'i386': raise NotImplementedError
+    return findall('0x7ff.........', hex(resp)) != []
 
 # New: helpers for leaking
 def leak_printf_deref_payload(buffer_offset: int, addr: list):

@@ -15,7 +15,11 @@ def libc_find(db_dir: str, leaks: Dict[str,int]):
     if len(found) == 1:
         libcid = found[0].split()[-1][:-1]
         log.info(b'found libc! id: ' + libcid)
-        return libc_db(db_dir, libcid.decode('utf-8'))
+        db = libc_db(db_dir, libcid.decode('utf-8'))
+        # Also help to calculate self.base
+        a_func, an_addr = list(leaks.items())[0]
+        db.calc_base(a_func, an_addr)
+        return db
     raise IndexError("incorrect number of libcs identified: %d" % len(found))
 
 class libc_db():

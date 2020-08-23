@@ -1,5 +1,11 @@
 # pwnscripts
-Very simple script(s) to hasten binary exploit creation. To use, replace `from pwn import *` with `from pwnscripts import *`, e.g.
+Very simple script(s) to hasten binary exploit creation. To use, run
+```
+git clone https://github.com/152334H/pwnscripts
+cd pwnscripts
+pip install -e .
+```
+and replace `from pwn import *` with `from pwnscripts import *`, e.g.
 
 ```python
 from pwnscripts import *
@@ -9,12 +15,13 @@ context.binary = './my_challenge'
 
 You might want to look at some of the examples in `test_all.py`.
 
-It's messy and it works. Current features:
-  * `find_printf_offset_*`: helper functions to bruteforce wanted printf offsets. Important ones:
-    1. _buffer: find the offset to whatever's manipulating the input format string.
-    2. _libc/_PIE: find a libc/PIE address with a specific offset
+## Features
+
+Current features:
+  * `find_printf_offset_*`: helper functions to bruteforce wanted printf offsets.
+    These are generic bruteforcers to find printf offsets to use for format string exploits.
     
-  * `libc_db`: a basic class for dealing with the libc-database project
+  * `libc_db`: a basic class for dealing with the libc-database project. Unlike LibcSearcher (for now), this class has a wrapper to help with finding one_gadgets as well.
     ```python
     db = libc_db('/path/to/libc-database', '<libc_id>') # e.g. libc6_2.27-3ubuntu1.2_amd64
     one_gadget = db.select_gadget() # Console will prompt for a selection. Behaviour may change.
@@ -22,13 +29,15 @@ It's messy and it works. Current features:
     # Let's say the libc address of `puts` was leaked as `libc_puts`
     libc_base = db.calc_base('puts', libc_puts)
     ```
+    Proper examples coming soon.
+
   * other unlisted features in development
 
 ## I tried using it; it doesn't work!
 
 File in an [issue](https://github.com/152334H/pwnscripts/issues), if you can. With a userbase of 1, it's hard to guess what might go wrong, but potentially:
- * The software is broken
- * Python is outdated
+ * pwnscripts is broken
+ * Python is outdated (try python3.8+)
  * The challenge is neither i386 or amd64; other architectures aren't implemented (yet).
  * The challenge is amd64, but `context.arch` wasn't set to `amd64`
 
@@ -40,6 +49,8 @@ File in an [issue](https://github.com/152334H/pwnscripts/issues), if you can. Wi
  * The printf offset lies on an unaligned boundary. Some challenges are designed this way; workaround planned.
 
 ## Updates
+
+pwnscripts is in development; if historical behaviour is broken it may be listed here
 
 20-08
 

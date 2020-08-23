@@ -11,7 +11,7 @@ def libc_find(db_dir: str, leaks: Dict[str,int]):
     the `dict` should have key-pairs of func_name:addr
     Will raise IndexError if a single libc id is not isolated.'''
     args = [_ for t in [(k,hex(v)) for k,v in leaks.items()] for _ in t]
-    found = subprocess.check_output([path.join(db_dir, 'find'), *args]).strip().split()
+    found = subprocess.check_output([path.join(db_dir, 'find'), *args]).strip().split('\n')
     if len(found) == 1:
         libcid = found[0].split()[-1][:-1]
         log.info(b'found libc! id: ' + libcid)

@@ -42,7 +42,7 @@ def find_printf_offset_PIE(resp: int, offset: int) -> int:
 def _find_printf_offset_sendprintf(requirement):
     def inner(sendprintf) -> int:
         preserved_log_level = context.log_level
-        for i in range(1,PWNSCRIPT_PRINTF_MAX): #note that we're not handling unaligned printf
+        for i in range(PWNSCRIPT_PRINTF_MIN,PWNSCRIPT_PRINTF_MAX): #note that we're not handling unaligned printf
             context.log_level = 'WARN'  # Patchwork to suppress annoying spam. Not the best solution.
             v = extract_first_hex(sendprintf('A'*8 + '%{}$p\n'.format(i)))
             context.log_level = preserved_log_level

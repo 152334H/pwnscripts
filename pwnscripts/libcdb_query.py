@@ -1,9 +1,22 @@
 from os import path, system
 from pwnscripts.string_checks import *
+from typing import Dict
 # Helpfully taken from the one_gadget README.md
 import subprocess
 def one_gadget(filename):
     return list(map(int, subprocess.check_output(['one_gadget', '--raw', filename]).split(b' ')))
+
+def libc_find(db_dir: str, leaks: Dict[str,int]):
+    '''identify a libc id from a `dict` of leaked addresses.
+    the `dict` should have key-pairs of func_name:addr
+    Will raise IndexError if a single libc id is not isolated.'''
+    args = [_ for t in leaks.items() for _ in t]
+    found = subprocess.check_output([path.join(db_dir, 'find'), *args]).strip().split()
+    if len(found) == 1:
+        libcid = found[0].split()[-1][:-1]
+        log.info(b'found libc! id: ' + libcid)
+        return libc_db(db_dir, libcid.decode('utf-8'))
+    raise IndexError("incorrect number of libcs identified: %d" % len(found))
 
 class libc_db():
     def __init__(self, db_dir:str, identifier: str):

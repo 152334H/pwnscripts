@@ -10,7 +10,7 @@ def libc_find(db_dir: str, leaks: Dict[str,int]):
     '''identify a libc id from a `dict` of leaked addresses.
     the `dict` should have key-pairs of func_name:addr
     Will raise IndexError if a single libc id is not isolated.'''
-    args = [_ for t in leaks.items() for _ in t]
+    args = [_ for t in [(k,hex(v)) for k,v in leaks.items()] for _ in t]
     found = subprocess.check_output([path.join(db_dir, 'find'), *args]).strip().split()
     if len(found) == 1:
         libcid = found[0].split()[-1][:-1]

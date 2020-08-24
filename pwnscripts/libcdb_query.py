@@ -15,7 +15,7 @@ def libc_find(db_dir: str, leaks: Dict[str,int]):
     found = subprocess.check_output([path.join(db_dir, 'find'), *args]).strip().split(b'\n')
     
     if len(found) == 1: # if a single libc was isolated
-        libcid = found[0].split()[-1][:-1]
+        libcid = found[0].split(b'(')[-1][:-1]  # NOTE: assuming ./find output format is "<url> (<id>)". This behavior has changed in the past.
         log.info(b'found libc! id: ' + libcid)
         db = libc_db(db_dir, libcid.decode('utf-8'))
         # Also help to calculate self.base

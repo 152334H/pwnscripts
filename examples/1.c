@@ -1,4 +1,7 @@
 //usr/bin/gcc -Wno-format-security "$0" -o 1.out; exit
+/* This example is to demonstrate how pwnscripts
+ * can help out in making printf write exploits
+ */
 #include <stdio.h>
 #include <string.h>
 void win() { printf("\nflag{Goodjob}"); }

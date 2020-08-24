@@ -18,7 +18,7 @@ You might want to look at some of the examples in `test_all.py`.
 ## Features
 
 Current features:
-  * `find_printf_offset_*`: helper functions to bruteforce wanted printf offsets.
+  * `fsb.find_offset`: helper functions to bruteforce wanted printf offsets.
     These are generic bruteforcers to find printf offsets to use for format string exploits.
     
   * `libc_db`: a basic class for dealing with the libc-database project. Unlike LibcSearcher (for now), this class has a wrapper to help with finding one_gadgets as well.
@@ -51,6 +51,12 @@ File in an [issue](https://github.com/152334H/pwnscripts/issues), if you can. Wi
 ## Updates
 
 pwnscripts is in development; if historical behaviour is broken it may be listed here
+
+20-08.1
+
+NEW: printf() functions are now kept under the `pwnscripts.fsb` module. Older prototypes for find_printf_* functions remain available for now.
+
+Addition of a lot of docstrings, plus example binaries.
 
 20-08
 

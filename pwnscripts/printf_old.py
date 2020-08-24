@@ -9,8 +9,6 @@ from typing import Generator, List
 
 PWNSCRIPT_PRINTF_MIN = 5
 PWNSCRIPT_PRINTF_MAX = 35
-PWNSCRIPT_PRINTF_OFFSET = None
-packn = lambda v: pack(v, context.bits)
 
 def _find_printf_offset_generic(requirement):
     def inner(sendprintf, regex=None) -> Generator[tuple, None, None]:

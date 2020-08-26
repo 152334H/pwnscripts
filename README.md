@@ -21,6 +21,8 @@ Current features:
   * `fsb.find_offset`: helper functions to bruteforce wanted printf offsets.
     These are generic bruteforcers to find printf offsets to use for format string exploits.
     
+    Some of these already exist as features in pwntools (e.g. `fsb.find_offset.buffer`), but other functions are, to my knowledge, unique to `pwnscripts`.
+    
   * `libc_db`: a basic class for dealing with the libc-database project. Unlike LibcSearcher (for now), this class has a wrapper to help with finding one_gadgets as well.
     ```python
     db = libc_db('/path/to/libc-database', '<libc_id>') # e.g. libc6_2.27-3ubuntu1.2_amd64
@@ -29,7 +31,7 @@ Current features:
     # Let's say the libc address of `puts` was leaked as `libc_puts`
     libc_base = db.calc_base('puts', libc_puts)
     ```
-    Proper examples coming soon.
+    Proper examples available in `examples/` and `test_all.py`.
 
   * other unlisted features in development
 

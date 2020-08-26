@@ -28,7 +28,7 @@ the offset of the stack canary:
 >>> fsb.find_offset.canary(printf_io)
 31
 '''
-from pwnscripts.string_checks import context, packn, extract_first_hex, log, findall, is_canary
+from pwnscripts.string_checks import context, extract_first_hex, log, findall, is_canary
 import pwnscripts.config as config
 from functools import wraps
 

@@ -2,12 +2,19 @@
 See examples/, or try starting with libc_db().
 '''
 from os import path, system
-from pwnscripts.string_checks import log, is_base_address
+from pwnscripts.string_checks import log, is_base_address, read
+from pwnlib.ui import options
+from pwnlib.util.misc import which
+from pwnlib.util.lists import concat
 from typing import Dict
 # Helpfully taken from the one_gadget README.md
 import subprocess
 def one_gadget(filename):
     return list(map(int, subprocess.check_output(['one_gadget', '--raw', filename]).split(b' ')))
+
+'''TODO
+"Run with this libc" function? (see: pwnlib.util.misc.parse_ldd_output)
+'''
 
 def libc_find(db_dir: str, leaks: Dict[str,int]):
     '''identify a libc id from a `dict` of leaked addresses.
@@ -25,7 +32,7 @@ def libc_find(db_dir: str, leaks: Dict[str,int]):
     <pwnscripts.libcdb_query.libc_db object at 0x000000000000>
     '''
     
-    args = [_ for t in [(k,hex(v)) for k,v in leaks.items()] for _ in t]
+    args = concat([(k,hex(v)) for k,v in leaks.items()])
     found = subprocess.check_output([path.join(db_dir, 'find'), *args]).strip().split(b'\n')
     
     if len(found) == 1: # if a single libc was isolated
@@ -49,12 +56,12 @@ class libc_db():
         self.__dict__.update({k: v for k, v in locals().items() if k != 'self'}) #magic
 
         # load up all library symbols
-        with open(self.libpath+'.symbols') as f:
+        with open(self.libpath+'.symbols') as f:    # Weird thing: this breaks if 'rb' is used.
             self.symbols = dict(l.split() for l in f.readlines())
         for k in self.symbols: self.symbols[k] = int(self.symbols[k],16)
         
         # load up one_gadget offsets in advance
-        if system('which one_gadget > /dev/null'):
+        if which('one_gadget') is None:
             log.info('one_gadget does not appear to exist in PATH. ignoring.')
             self.one_gadget = None
         else:
@@ -95,7 +102,7 @@ class libc_db():
         assert self.one_gadget is not None
         system("one_gadget '" + self.libpath+".so'")
         #TODO: find a way to do this that looks less hacky
-        option = int(input('choose the gadget to use (0-indexed): '))
+        option = int(options('choose the gadget to use: ', list(map(hex,self.one_gadget))))
         assert 0 <= option < len(self.one_gadget)
         return self.one_gadget[option]
 

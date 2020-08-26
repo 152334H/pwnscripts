@@ -70,7 +70,7 @@ def find_printf_offset_code(resp) -> int:
 @_find_printf_offset_sendprintf
 def find_printf_offset_canary(resp) -> int:
     '''heuristic to find canary'''
-    return resp % 0x100 == 0 and b'\x00' not in packn(resp)[1:] and (context.arch == 'amd64' or (lambda b: b < 0xf0 and b != 0x08)(packn(resp)[3]))
+    return resp % 0x100 == 0 and b'\x00' not in pack(resp)[1:] and (context.arch == 'amd64' or (lambda b: b < 0xf0 and b != 0x08)(pack(resp)[3]))
 
 @_find_printf_offset_sendprintf
 def find_printf_offset_stack(resp) -> int:
@@ -93,7 +93,7 @@ def leak_printf_deref_payload(buffer_offset: int, addr: List[int]):
     payload = '||'.join("%{}$s".format(i) for i in range(off, off+len(addr)))
     payload = '^^' + payload + '$$'
     payload = payload.ljust(extra_offset*context.bits//8,'\x19').encode()
-    payload += b''.join(map(packn, addr))
+    payload += b''.join(map(pack, addr))
     return payload
 
 def leak_printf_deref_extractor(resp: bytes):

@@ -28,7 +28,9 @@ the offset of the stack canary:
 >>> fsb.find_offset.canary(printf_io)
 31
 '''
-from pwnscripts.string_checks import context, extract_first_hex, log, findall, is_canary
+from pwnlib.util.cyclic import cyclic, cyclic_find
+from pwnlib.util.packing import p32
+from pwnscripts.string_checks import context, extract_first_hex, log, findall, is_canary, attrib_set_to
 import pwnscripts.config as config
 from functools import wraps
 
@@ -37,9 +39,8 @@ def _sendprintf(requirement):
     def inner(sendprintf) -> int:
         preserved_log_level = context.log_level
         for i in range(config.PRINTF_MIN,config.PRINTF_MAX): #note that we're not handling unaligned printf
-            context.log_level = 'WARN'  # Patchwork to suppress annoying spam. Not the best solution.
-            v = extract_first_hex(sendprintf('A'*8 + '%{}$p\n'.format(i)))
-            context.log_level = preserved_log_level
+            with attrib_set_to(context, 'log_level', 'WARN') as _:  # shut up bruteforcing by default
+                v = extract_first_hex(sendprintf('A'*8 + '%{}$p\n'.format(i)))
             if context.log_level == 'DEBUG':
                 print('pwnscripts: v is %d' % v)
             if v == -1: continue
@@ -50,13 +51,39 @@ def _sendprintf(requirement):
     return inner
 
 @_sendprintf
-def buffer(resp) -> int:
+def _buffer(resp) -> int:
+    expected = (0x41414141 if context.arch == 'i386' else 0x4141414141414141)
+    return expected == resp
+
+def buffer(sendprintf, maxlen=20) -> int:
     '''Bruteforcer to locate the offset of the input string itself.
     i.e. if buffer() returns 6,
         printf("%6$d") gives the value of p32("%6$p")
+    `maxlen` refers to the maximum length of the input. If no value
+    is given, the program assumes maxlen=20.
+
+    Larger values of `maxlen` will allow for faster offset guessing.
     '''
-    expected = (0x41414141 if context.arch == 'i386' else 0x4141414141414141)
-    return expected == resp
+    length_of_guesses = (maxlen-len("%10$x\n")) // context.bytes
+    # So long as more than 1 guess can be done at a time:
+    if length_of_guesses > 1:
+        '''Let's say length_of_guesses=3 words worth of cyclic() can be inputted.
+        If config.PRINTF_MIN=5, then the first payload ought to be
+            cyclic(3*context.bytes) + "0x%{}$x\n".format(5+(3-1))
+        because the first guess should be able to catch any offset in the range
+            range(config.PRINTF_MIN, config.PRINTF_MIN+length_of_guesses)
+        '''
+        for offset in range(config.PRINTF_MIN+length_of_guesses-1, config.PRINTF_MAX+length_of_guesses-1, length_of_guesses):
+            payload = cyclic(length_of_guesses*context.bytes)
+            with attrib_set_to(context, 'log_level', 'WARN') as _:  # shut up bruteforcing by default
+                extract = extract_first_hex(sendprintf(payload + "0x%{}$x\n".format(offset).encode()))
+            if extract != -1 and 0 <= (found := cyclic_find(p32(extract))) < len(payload):   # Error will be -1
+                assert found%8 == 0 # if not, the offset is non-aligned
+                log.info('offset for buffer: %d' % (offset-found//8))
+                return offset-found//8
+        raise RuntimeError  # Give up
+    else:   # use default bruteforcer
+        return _buffer(sendprintf)
 
 @_sendprintf
 def code(resp) -> int:

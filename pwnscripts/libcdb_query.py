@@ -1,16 +1,16 @@
 '''Reinventing the wheel for LibcSearcher
 See examples/, or try starting with libc_db().
 '''
+from typing import Dict
 from os import path, system
-from pwnscripts.string_checks import log, is_base_address, read
+from subprocess import check_output
 from pwnlib.ui import options
 from pwnlib.util.misc import which
 from pwnlib.util.lists import concat
-from typing import Dict
+from pwnscripts.string_checks import log, is_base_address
 # Helpfully taken from the one_gadget README.md
-import subprocess
 def one_gadget(filename):
-    return list(map(int, subprocess.check_output(['one_gadget', '--raw', filename]).split(b' ')))
+    return list(map(int, check_output(['one_gadget', '--raw', filename]).split(b' ')))
 
 '''TODO
 "Run with this libc" function? (see: pwnlib.util.misc.parse_ldd_output)
@@ -33,7 +33,7 @@ def libc_find(db_dir: str, leaks: Dict[str,int]):
     '''
     
     args = concat([(k,hex(v)) for k,v in leaks.items()])
-    found = subprocess.check_output([path.join(db_dir, 'find'), *args]).strip().split(b'\n')
+    found = check_output([path.join(db_dir, 'find'), *args]).strip().split(b'\n')
     
     if len(found) == 1: # if a single libc was isolated
         libcid = found[0].split(b'(')[-1][:-1]  # NOTE: assuming ./find output format is "<url> (<id>)". This behavior has changed in the past.

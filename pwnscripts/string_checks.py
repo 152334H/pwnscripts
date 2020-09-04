@@ -1,6 +1,14 @@
 '''Misc. functions that pwntools may/maynot already have'''
 from pwn import *
 from re import findall, search
+from contextlib import contextmanager
+
+# NOTE: put this somewhere more reasonable
+@contextmanager
+def attrib_set_to(obj:object, attr:str, v):
+    temp = getattr(obj, attr, None)
+    try: yield setattr(obj, attr, v)
+    finally: setattr(obj, attr, temp)
 
 def offset_to_regex(v: int) -> str:
     return '.*' + hex(v)[2:] + '$'

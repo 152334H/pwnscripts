@@ -1,6 +1,6 @@
 # pwnscripts
 Very simple script(s) to hasten binary exploit creation. To use, run
-```
+```bash
 git clone https://github.com/152334H/pwnscripts
 cd pwnscripts
 pip install -e .
@@ -18,12 +18,31 @@ You might want to look at some of the examples in `test_all.py`.
 ## Features
 
 Current features:
-  * `fsb.find_offset`: helper functions to bruteforce wanted printf offsets.
-    These are generic bruteforcers to find printf offsets to use for format string exploits.
-    
-    Some of these already exist as features in pwntools (e.g. `fsb.find_offset.buffer`), but other functions are, to my knowledge, unique to `pwnscripts`.
-    
-  * `libc_db`: a basic class for dealing with the libc-database project. Unlike LibcSearcher (for now), this class has a wrapper to help with finding one_gadgets as well.
+  * `fsb`, which can be split further into
+    * `.find_offset`: helper functions to bruteforce wanted printf offsets.
+
+      If you've ever found yourself spamming `%n$llx` into a terminal: this module will automate away all that. Take a look at the [example code](test_all.py) to see how.
+
+      This already partially exists as a feature in pwntools (see `pwnlib.fmtstr.FmtStr`), but pwnscripts expands functionality by having bruteforcers for other important printf offsets, including
+      1. `canary`s, for defeating stack protectors,
+      2. `stack` addresses, to make leaking a stack pointer much easier,
+      3. other things like `code` addresses with more niche purposes
+    * `.leak`: a simple two-function module to make leaking values with `%s` a lot easier.
+
+      The simple idea is that you get a payload to leak printf values:
+      ```python
+      offset = fsb.find_offset.buffer(...) # == 6
+      payload = fsb.leak.deref_payload(offset, [0x400123, 0x600123])
+      print(payload)  # b'^^%10$s||%11$s$$#\x01@\x00#\x01`\x00'
+      ```
+      And after sending the payload, extract the values with a helper function:
+      ```python
+      r = remote(...)
+      r.sendline(payload)
+      print(fsb.leak.deref_extractor(r.recvline()))  # [b'\x80N\x03p\x94\x7f', b' \xeb\x04p\x94\x7f']
+      ```
+
+  * `libc_db`: a basic class for dealing with the libc-database project. **Unlike LibcSearcher** (for now), this class has a wrapper to help with finding one_gadgets as well.
     ```python
     db = libc_db('/path/to/libc-database', binary='/path/to/libc.so.6') # e.g. libc6_2.27-3ubuntu1.2_amd64
     one_gadget = db.select_gadget() # Console will prompt for a selection. Behaviour may change.
@@ -31,10 +50,10 @@ Current features:
     # Let's say the libc address of `puts` was leaked as `libc_puts`
     libc_base = db.calc_base('puts', libc_puts)
     ```
-    Proper examples available in `examples/` and `test_all.py`.
 
   * other unlisted features in development
 
+Proper examples for `pwnscripts` are available in `examples/` and `test_all.py`.
 ## I tried using it; it doesn't work!
 
 File in an [issue](https://github.com/152334H/pwnscripts/issues), if you can. With a userbase of 1, it's hard to guess what might go wrong, but potentially:

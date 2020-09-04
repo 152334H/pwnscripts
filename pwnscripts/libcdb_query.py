@@ -1,6 +1,7 @@
 '''Reinventing the wheel for LibcSearcher
 See examples/, or try starting with libc_db().
 '''
+from re import search
 from typing import Dict
 from os import path, system
 from subprocess import check_output, CalledProcessError
@@ -66,8 +67,13 @@ class libc_db():
     def __binary_init__(self):
         identify = path.join(self.db_dir, 'identify')
         assert path.isfile(self.binary)
-        self.id = check_output([identify, self.binary])[:-1].decode() # EXPECTED OUTPUT: b'<identifier>\n'
         # check_output will raise an error on non-zero exit, so no other sanity checks are needed here.
+        try: self.id = check_output([identify, self.binary])[:-1].decode() # EXPECTED OUTPUT: b'<identifier>\n'
+        except CalledProcessError:  # assume that this is because a hitherto-unknown libc binary was given
+            log.warn("the file %r was not found in the libc-database. Assuming it is a libc file." % self.binary)
+            add = path.join(self.db_dir, 'add')
+            output = check_output([add, self.binary]).decode()  # If this gives an error code, just let it die
+            self.id = search('local-[0-9a-f]+', output).group(0)# !: assumes self.binary does not match
         self.__id_init__()
     
     def __id_init__(self):

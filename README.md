@@ -25,7 +25,7 @@ Current features:
     
   * `libc_db`: a basic class for dealing with the libc-database project. Unlike LibcSearcher (for now), this class has a wrapper to help with finding one_gadgets as well.
     ```python
-    db = libc_db('/path/to/libc-database', '<libc_id>') # e.g. libc6_2.27-3ubuntu1.2_amd64
+    db = libc_db('/path/to/libc-database', binary='/path/to/libc.so.6') # e.g. libc6_2.27-3ubuntu1.2_amd64
     one_gadget = db.select_gadget() # Console will prompt for a selection. Behaviour may change.
     ... <insert exploit code to leak libc address here> ...
     # Let's say the libc address of `puts` was leaked as `libc_puts`
@@ -46,13 +46,19 @@ File in an [issue](https://github.com/152334H/pwnscripts/issues), if you can. Wi
      * Set `context.binary` appropriately, or set `context.arch` manually if no binary is given
  * The printf offset bruteforcing range is insufficient
 
-     * Overwrite `PWNSCRIPT_PRINTF_MAX` with an appropriate value.
+     * Overwrite `config.PRINTF_MAX` with an appropriate value.
 
  * The printf offset lies on an unaligned boundary. Some challenges are designed this way; workaround planned.
 
 ## Updates
 
 pwnscripts is in development; if historical behaviour is broken it may be listed here
+
+20-09
+
+libc_db() can (must) now be initialised with either a filepath to a libc.so.6 `binary`, or with an identifier `id`. 
+
+This breaks the original behaviour of allowing e.g. `libc_db('/path/to/libc-database', '<identifier>')`
 
 20-08.1
 

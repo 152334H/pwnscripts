@@ -1,4 +1,6 @@
-'''Misc. functions that pwntools may/maynot already have'''
+'''Misc. functions that pwntools may/maynot already have
+TODO: This module requires cleanup
+'''
 from pwn import *
 from re import findall, search
 from contextlib import contextmanager

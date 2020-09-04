@@ -87,7 +87,12 @@ def buffer(sendprintf, maxlen=20) -> int:
 
 @_sendprintf
 def code(resp) -> int:
-    return findall({'i386': '0x804...', 'amd64': '0x40....'}[context.arch], hex(resp)) != []
+    '''heuristic-based bruteforcer for non-PIE code addresses.
+    Simply put, any value matching
+        '0x804.{4}' (on i386)
+        '0x40.{4}'  (on amd64)
+    will be considered a code adderess.'''
+    return findall({'i386': '0x804....', 'amd64': '0x40....'}[context.arch], hex(resp)) != []
 
 @_sendprintf
 def canary(resp) -> int:
@@ -104,3 +109,11 @@ def canary(resp) -> int:
 def stack(resp) -> int:
     if context.arch != 'amd64': raise NotImplementedError
     return findall('0x7ff.........', hex(resp)) != []
+
+'''TODO: this thing. Would be useful for e.g. grabbing offset to __libc_start_main_ret in main()
+Same principle applies for _offset_PIE, because that can be useful for any non-main .text function.
+def find_printf_offset_libc(resp: int, offset: int) -> int:
+    \'''printf generic for libc addresses. `offset` is optional.
+    Provide `offset` to search for a specific offset.\'''
+    return is_libc_address(resp) and offset_match(resp, offset)
+'''

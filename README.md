@@ -18,7 +18,31 @@ You might want to look at some of the examples in `test_all.py`.
 ## Features
 
 Current features:
-  * `fsb`, which can be split further into
+  * `libc_db`: a basic class for dealing with the libc-database project. **Unlike LibcSearcher** (for now), this class has a wrapper to help with finding `one_gadget`s as well.
+    ```python
+    db = libc_db('/path/to/libc-database', binary='/path/to/libc.so.6') # e.g. libc6_2.27-3ubuntu1.2_amd64
+    one_gadget = db.select_gadget() # Console will prompt for a selection.
+    ... <insert exploit code to leak libc address here> ...
+    # Let's say the libc address of `puts` was leaked as `libc_puts`
+    libc_base = db.calc_base('puts', libc_puts)
+    ```
+  * `ROP`: an extension of `pwnlib.rop.rop.ROP`. Core feature is to simplify ROP building outside of SIGROP:
+    ```python
+		>>> context.arch = 'amd64'
+		>>> r = ROP('./binary')
+		>>> r.system_call(0x3b, ['/bin/sh', 0, 0])
+		>>> print(r.dump())
+		0x0000:         0x41e4af pop rax; ret
+		0x0008:             0x3b
+		0x0010:         0x44a309 pop rdx; pop rsi; ret
+		0x0018:              0x0 [arg2] rdx = 0
+		0x0020:              0x0 [arg1] rsi = 0
+		0x0028:         0x401696 pop rdi; ret
+		0x0030:             0x40 [arg0] rdi = AppendedArgument(['/bin/sh'], 0x0)
+		0x0038:         0x4022b4 syscall
+		0x0040:   b'/bin/sh\x00'
+    ```
+   * `fsb`, which can be split further into
     * `.find_offset`: helper functions to bruteforce wanted printf offsets.
 
       If you've ever found yourself spamming `%n$llx` into a terminal: this module will automate away all that. Take a look at the [example code](test_all.py) to see how.
@@ -41,32 +65,7 @@ Current features:
       r.sendline(payload)
       print(fsb.leak.deref_extractor(r.recvline()))  # [b'\x80N\x03p\x94\x7f', b' \xeb\x04p\x94\x7f']
       ```
-
-  * `libc_db`: a basic class for dealing with the libc-database project. **Unlike LibcSearcher** (for now), this class has a wrapper to help with finding one_gadgets as well.
-    ```python
-    db = libc_db('/path/to/libc-database', binary='/path/to/libc.so.6') # e.g. libc6_2.27-3ubuntu1.2_amd64
-    one_gadget = db.select_gadget() # Console will prompt for a selection. Behaviour may change.
-    ... <insert exploit code to leak libc address here> ...
-    # Let's say the libc address of `puts` was leaked as `libc_puts`
-    libc_base = db.calc_base('puts', libc_puts)
-    ```
-  * `ROP`: an extension of `pwnlib.rop.rop.ROP`. Core feature is to simplify ROP building outside of SIGROP:
-    ```python
-		>>> context.arch = 'amd64'
-		>>> r = ROP('./binary')
-		>>> r.system_call(0x3b, ['/bin/sh', 0, 0])
-		>>> print(r.dump())
-		0x0000:         0x41e4af pop rax; ret
-		0x0008:             0x3b
-		0x0010:         0x44a309 pop rdx; pop rsi; ret
-		0x0018:              0x0 [arg2] rdx = 0
-		0x0020:              0x0 [arg1] rsi = 0
-		0x0028:         0x401696 pop rdi; ret
-		0x0030:             0x40 [arg0] rdi = AppendedArgument(['/bin/sh'], 0x0)
-		0x0038:         0x4022b4 syscall
-		0x0040:   b'/bin/sh\x00'
-    ```
-  * other unlisted features in development
+ * other unlisted features in development
 
 Proper examples for `pwnscripts` are available in `examples/` and `test_all.py`.
 ## I tried using it; it doesn't work!

@@ -104,7 +104,7 @@ class libc_db():
         assert is_base_address(self.base)   # check that base addr is reasonable
         return self.base
 
-    def select_gadget(self) -> int:
+    def select_gadget(self, option:int=None) -> int:
         '''An interactive function to choose a preferred
         one_gadget requirement mid-exploit.
         
@@ -129,7 +129,8 @@ class libc_db():
         assert self.one_gadget is not None
         system("one_gadget '" + self.libpath+".so'")
         #TODO: find a way to do this that looks less hacky
-        option = int(options('choose the gadget to use: ', list(map(hex,self.one_gadget))))
+        if option is None:
+            option = int(options('choose the gadget to use: ', list(map(hex,self.one_gadget))))
         assert 0 <= option < len(self.one_gadget)
         return self.one_gadget[option]
 

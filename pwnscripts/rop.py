@@ -18,6 +18,7 @@ class ROP(rop.rop.ROP):
 		return self.build(base=base).dump()
 	def system_call(self, num:int, args:list):
 		'''Making system calls without the massive overhead of SIGROP
+		>>> context.arch = 'amd64'
 		>>> r = ROP('./binary')
 		>>> r.system_call(0x3b, ['/bin/sh', 0, 0])
 		>>> print(r.dump())

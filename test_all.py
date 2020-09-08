@@ -55,7 +55,7 @@ class BinTests(ut.TestCase):
                 r.send(l)
                 return r.recvline()
             with attrib_set_to(context, 'log_level', 'info') as _:  # show info for testing purposes
-                buf_off = fsb.find_offset.buffer(printf)
+                buf_off = fsb.find_offset.buffer(printf, maxlen=63)
 
             # send a printf GOT table leak exploit
             r = process(**proc)
@@ -73,7 +73,7 @@ class BinTests(ut.TestCase):
 
             # test the libc id found
             r = process(**proc)
-            r.sendline(db.identifier)
+            r.sendline(db.id)
             r.recvline()
             self.assertEqual(r.recvline().strip(), b'flag{congrats}')
             

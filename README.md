@@ -52,6 +52,7 @@ Current features:
     ```
   * `ROP`: an extension of `pwnlib.rop.rop.ROP`. Core feature is to simplify ROP building outside of SIGROP:
     ```python
+		>>> context.arch = 'amd64'
 		>>> r = ROP('./binary')
 		>>> r.system_call(0x3b, ['/bin/sh', 0, 0])
 		>>> print(r.dump())

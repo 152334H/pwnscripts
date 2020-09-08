@@ -38,7 +38,6 @@ class ROP(rop.rop.ROP):
 		self.raw(Call('syscall', self.syscall.address, args))
 	def pop(self, registers:dict):
 		'''convinence function to edit a few registers
-		code helpfully ripped from pwnlib.rop.rop.build
 		>>> rop = ROP("./binary")
 		>>> rop.pop({'rax':0x3b, 'rsi': 0, 'rdx': 0})
 		>>> print(rop.dump())

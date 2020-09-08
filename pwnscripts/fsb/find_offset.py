@@ -83,9 +83,9 @@ def buffer(sendprintf, maxlen=20) -> int:
             #with attrib_set_to(context, 'log_level', 'WARN') as _:
             extract = extract_first_hex(sendprintf(payload))    # Error will be -1
             if extract != -1 and 0 <= (found := cyclic_find(p32(extract))) < len(payload):
-                assert found%8 == 0 # if not, the offset is non-aligned
-                log.info('offset for buffer: %d' % (offset-found//8))
-                return offset-found//8
+                assert found%context.bytes == 0 # if not, the offset is non-aligned
+                log.info('offset for buffer: %d' % (offset-found//context.bytes))
+                return offset-found//context.bytes
         raise RuntimeError  # Give up
     # else: use default bruteforcer
     return _buffer(sendprintf)

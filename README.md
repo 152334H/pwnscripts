@@ -42,7 +42,7 @@ Current features:
 		0x0038:         0x4022b4 syscall
 		0x0040:   b'/bin/sh\x00'
     ```
-   * `fsb`, which can be split further into
+  * `fsb`, which can be split further into
     * `.find_offset`: helper functions to bruteforce wanted printf offsets.
 
       If you've ever found yourself spamming `%n$llx` into a terminal: this module will automate away all that. Take a look at the [example code](test_all.py) to see how.

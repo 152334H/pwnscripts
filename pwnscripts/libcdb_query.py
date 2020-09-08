@@ -57,10 +57,12 @@ class libc_db():
         >>> db = libcdb('/path/to/libc-database', id='libc6_2.27-3ubuntu1_amd64')
         >>> db = libcdb('/path/to/libc-database', binary='./libc.so.6')
         '''
-        self.__dict__.update({k: v for k, v in locals().items() if k != 'self'})    # Assign arguments to self.
+        self.db_dir = db_dir
         if id is not None:
+            self.id = id
             self.__id_init__()
         elif binary is not None:
+            self.binary = binary
             self.__binary_init__()
         else:
             raise ValueError('libc_db(...) requires binary="/path/to/libc.so.6"'+\

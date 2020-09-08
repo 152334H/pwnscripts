@@ -6,9 +6,11 @@ from typing import Dict
 from os import path, system
 from subprocess import check_output, CalledProcessError
 from pwnlib.ui import options
+from pwnlib.log import getLogger
 from pwnlib.util.misc import which
 from pwnlib.util.lists import concat
-from pwnscripts.string_checks import log, is_base_address
+from pwnscripts.string_checks import is_base_address
+log = getLogger('pwnlib.exploit')
 # Helpfully taken from the one_gadget README.md
 def one_gadget(filename):
     return list(map(int, check_output(['one_gadget', '--raw', filename]).split(b' ')))

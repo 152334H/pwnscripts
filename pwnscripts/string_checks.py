@@ -1,9 +1,11 @@
 '''Misc. functions that pwntools may/maynot already have
 TODO: This module requires cleanup
 '''
-from pwn import *
 from re import findall, search
 from contextlib import contextmanager
+from pwnlib.context import context
+from pwnlib.util.lists import group
+from pwnlib.util.packing import pack, unpack
 
 # NOTE: put this somewhere more reasonable
 @contextmanager
@@ -31,7 +33,7 @@ def extract_all_hex(s: bytes) -> list:
     except IndexError: return []
 
 def extract_first_hex(s: bytes) -> int:
-    try: return int(findall(b'0x[0-9a-z]+', s)[0],16)
+    try: return int(findall(b'0x[0-9a-f]+', s)[0],16)
     except IndexError: return -1
 
 def is_PIE_address(v: int) -> bool:

@@ -1,7 +1,8 @@
 '''tools for printf leaking, which pwntools
 (at the time of writing) appears to lack'''
 from typing import List
-from pwnscripts.string_checks import *
+from pwnlib.context import context
+from pwnlib.util.packing import pack
 
 def deref_payload(buffer_offset: int, addr: List[int]):
     '''Make a suboptimal printf payload for dereferencing the addresses

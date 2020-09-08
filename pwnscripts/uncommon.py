@@ -1,7 +1,7 @@
 '''A dumping ground for some uncommon CTF-type exploits
 that are repeated enough to justify existing as an
 automated script.'''
-# TODO: see if ret2csu can be done with pwntool's ROP, and if not...
+# TODO: see if ret2csu gets pushed to pwntools-dev. If not...
 # TODO: fini_arr.
 from pwn import context
 def sh():

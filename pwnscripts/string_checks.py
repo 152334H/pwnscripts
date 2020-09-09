@@ -43,11 +43,14 @@ def extract_first_hex(s: bytes) -> int:
 def is_wsl() -> bool: return b'Microsoft' in read('/proc/sys/kernel/osrelease') 
 # TODO: compress all of theses is_X_address into a... class or something
 def is_PIE_address(addr: int) -> bool:
-    '''Heuristic for _potential_ PIE addresses'''
+    '''Heuristic for _potential_ PIE addresses
+    
+    Matches for '0x5[56][0-9a-f]{10}'
+    '''
     if is_wsl():
         log.warn("The memory mappings for wsl1 are not always congruent"+\
                 " with that of normal linux. Some things may break.")
-    regex = '0x55.*' if context.arch == 'amd64' else '0x56.*'
+    regex = '0x5[56][0-9a-f]{10}'
     return addr > 0 and search(regex, hex(addr))
 
 def is_stack_address(addr: int) -> bool:

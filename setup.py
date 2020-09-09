@@ -1,7 +1,7 @@
 from setuptools import setup, find_packages
 with open("README.md", 'r') as f: long_desc = f.read()
 setup(name='pwnscripts',
-      version='0.0.3',
+      version='0.1.0',
       description='Simple pwntools QoL scripts',
       long_description=long_desc,
       long_description_content_type='text/markdown',

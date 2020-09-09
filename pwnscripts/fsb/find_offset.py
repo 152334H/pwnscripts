@@ -62,14 +62,24 @@ def _buffer(resp) -> int:
     expected = (0x41414141 if context.arch == 'i386' else 0x4141414141414141)
     return expected == resp
 
-def buffer(sendprintf, maxlen=20) -> int:
+def buffer(sendprintf: Callable[[bytes],bytes], maxlen=20) -> int:
     '''Bruteforcer to locate the offset of the input string itself.
     i.e. if buffer() returns 6,
         printf("%6$d") gives the value of p32("%6$p")
-    `maxlen` refers to the maximum length of the input. If no value
-    is given, the program assumes maxlen=20.
 
-    Larger values of `maxlen` will allow for faster offset guessing.
+    Arguments:
+        `sendprintf`: a function that simulates a single printf() call.
+            This is much like the function passable to pwntools' FmtStr().
+            e.g.
+                def printf(l: bytes):
+                    r = process('./mybinary')
+                    r.send(l)
+                    return r.recvline()
+                buffer = fsb.find_offset.buffer(printf)
+        `maxlen`: the maximum length of the input. If no value
+            is given, the program assumes maxlen=20.
+
+        Larger values of `maxlen` will allow for faster offset guessing.
     '''
     # Note: if config.PRINTF_MAX becomes really large, this might break
     guess_n = (maxlen-len("0x%10$x\n")) // context.bytes

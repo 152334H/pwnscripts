@@ -89,6 +89,8 @@ pwnscripts is in development; if historical behaviour is broken it may be listed
 
 20-09
 
+Begin following PEP 440
+
 NEW: `fsb.find_offset` extended with offset-matching searches.
 
 NEW: `pwntools`' `ROP` class has been extended with new features.

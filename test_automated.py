@@ -3,7 +3,8 @@ Some of these test cases are "probabilistic", in that they
 can arbitrarily fail or pass depending on <undetermined factor>.
 '''
 import unittest as ut
-from pwnscripts import *
+# Unfortunately, pytest interprets every `test.*` function as a testable function, so no import * here
+from pwnscripts import system, context, log, attrib_set_to, fsb, extract_first_hex, fmtstr_payload, is_wsl, extract_all_hex, pack, path
 
 class BinTests(ut.TestCase):
     def test_A_common_sense(self):

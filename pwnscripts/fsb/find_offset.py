@@ -41,7 +41,7 @@ log = getLogger('pwnlib.exploit')
 def _sendprintf(requirement: Callable[[int,Optional[str]],bool]=None, has_regex: bool=False):
     if requirement is None: return partial(_sendprintf, has_regex=has_regex)    # ???
     @wraps(requirement)
-    def inner(sendprintf: Callable[[bytes],bytes], regex: int=None) -> int:
+    def inner(sendprintf: Callable[[bytes],bytes], offset: int=None) -> int:
         if has_regex is False: _requirement = lambda v,_: requirement(v)
         else: _requirement = requirement
         # Actual code
@@ -51,7 +51,7 @@ def _sendprintf(requirement: Callable[[int,Optional[str]],bool]=None, has_regex:
             extract = extract_first_hex(sendprintf(payload))    # expect @context.quiet here
             log.debug('pwnscripts: extracted ' + hex(extract))
             if extract == -1: continue
-            if _requirement(extract, regex):
+            if _requirement(extract, offset):
                 log.info('%s for %r: %d' % (__name__, requirement.__name__, i))
                 return i
         raise RuntimeError
@@ -126,7 +126,7 @@ def stack(resp) -> int:
 @_sendprintf(has_regex=True)
 def libc(resp: int, offset: int=None) -> int:
     '''pattern-matcher for a libc address with an offset of `offset`
-    This function is _not_ integrated with libc_db; it simply does a regex check
+    This function is _not_ integrated with libc_db; it simply does a offset check
     for libc addresses, plus the `offset` given.
     An offset of `None` will simply pattern-match for any generic libc-ish address
     '''

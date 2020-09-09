@@ -13,7 +13,7 @@ context.binary = './my_challenge'
 ...
 ```
 
-You might want to look at some of the examples in `test_all.py`.
+You might want to look at some of the examples in `user_tests_and_examples.py`.
 
 ## Features
 
@@ -45,7 +45,7 @@ Current features:
   * `fsb`, which can be split further into
     * `.find_offset`: helper functions to bruteforce wanted printf offsets.
 
-      If you've ever found yourself spamming `%n$llx` into a terminal: this module will automate away all that. Take a look at the [example code](test_all.py) to see how.
+      If you've ever found yourself spamming `%n$llx` into a terminal: this module will automate away all that. Take a look at the [example code](user_tests_and_examples.py) to see how.
 
       This already partially exists as a feature in pwntools (see `pwnlib.fmtstr.FmtStr`), but pwnscripts expands functionality by having bruteforcers for other important printf offsets, including
       1. `canary`s, for defeating stack protectors,
@@ -67,7 +67,7 @@ Current features:
       ```
  * other unlisted features in development
 
-Proper examples for `pwnscripts` are available in `examples/` and `test_all.py`.
+Proper examples for `pwnscripts` are available in `examples/` and `user_tests_and_examples.py`.
 ## I tried using it; it doesn't work!
 
 File in an [issue](https://github.com/152334H/pwnscripts/issues), if you can. With a userbase of 1, it's hard to guess what might go wrong, but potentially:

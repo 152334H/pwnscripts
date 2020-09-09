@@ -49,7 +49,7 @@ def _sendprintf(requirement: Callable[[int,Optional[str]],bool]=None, has_regex:
             payload = 'A'*8 + '%{}$p\n'.format(i)
             #with attrib_set_to(context, 'log_level', 'WARN') as _:  # leave quieting to user
             extract = extract_first_hex(sendprintf(payload))    # expect @context.quiet here
-            log.debug('pwnscripts: extracted %d' % extract)
+            log.debug('pwnscripts: extracted ' + hex(extract))
             if extract == -1: continue
             if _requirement(extract, regex):
                 log.info('%s for %r: %d' % (__name__, requirement.__name__, i))

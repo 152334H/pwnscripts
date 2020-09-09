@@ -3,9 +3,12 @@ TODO: This module requires cleanup
 '''
 from re import findall, search
 from contextlib import contextmanager
+from pwnlib.log import getLogger
 from pwnlib.context import context
+from pwnlib.util.misc import read
 from pwnlib.util.lists import group
 from pwnlib.util.packing import pack, unpack
+log = getLogger('pwnlib.exploit')
 
 # NOTE: put this somewhere more reasonable
 @contextmanager
@@ -18,8 +21,9 @@ def offset_to_regex(addr: int) -> str:
     return '.*' + hex(addr)[2:] + '$'
 
 def offset_match(addr: int, offset: int) -> bool:
-    return offset == None or bool(search(offset_to_regex(offset), hex(addr)))
+    return offset is None or bool(search(offset_to_regex(offset), hex(addr)))
 
+# NOTE: ideally, n should default to context.bytes, but a default value is not dynamic...
 def extract_first_bytes(s: bytes, n: int) -> int:
     return unpack(s[:n], n*8)
 
@@ -36,8 +40,13 @@ def extract_first_hex(s: bytes) -> int:
     try: return int(findall(b'0x[0-9a-f]+', s)[0], 16)
     except IndexError: return -1
 
+def is_wsl() -> bool: return b'Microsoft' in read('/proc/sys/kernel/osrelease') 
+# TODO: compress all of theses is_X_address into a... class or something
 def is_PIE_address(addr: int) -> bool:
     '''Heuristic for _potential_ PIE addresses'''
+    if is_wsl():
+        log.warn("The memory mappings for wsl1 are not always congruent"+\
+                " with that of normal linux. Some things may break.")
     regex = '0x55.*' if context.arch == 'amd64' else '0x56.*'
     return addr > 0 and search(regex, hex(addr))
 

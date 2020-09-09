@@ -1,4 +1,4 @@
-//usr/bin/gcc -fno-stack-protector -no-pie "$0" -o 2.out; exit
+//usr/bin/gcc -Wno-format-security -fno-stack-protector -no-pie "$0" -o 2.out; exit
 /* This example is to show how printf can be used
  * in conjuction with the `libc_db` class to
  * identify a remote libc version

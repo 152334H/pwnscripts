@@ -89,6 +89,8 @@ pwnscripts is in development; if historical behaviour is broken it may be listed
 
 20-09
 
+NEW: `fsb.find_offset` extended with offset-matching searches.
+
 NEW: `pwntools`' `ROP` class has been extended with new features.
 
 libc_db() can (must) now be initialised with either a filepath to a libc.so.6 `binary`, or with an identifier `id`. 

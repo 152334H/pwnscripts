@@ -102,6 +102,13 @@ class libc_db():
         '''Given the ASLR address of a libc function,
         calculate (and return) the randomised base address
         
+        Arguments:
+            `symbol`: the name of the function/symbol found in libc
+                e.g. read, __libc_start_main, fgets
+            `addr`: the actual ASLR address assigned to the libc symbol
+                for the current active session
+                e.g. 0x7f1234567890
+        Returns: the ASLR base address of libc (for the active session)
         '''
         
         self.base = addr - self.symbols[symbol]

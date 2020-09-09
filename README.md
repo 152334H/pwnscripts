@@ -1,4 +1,6 @@
 # pwnscripts
+![Build Status](https://github.com/152334H/pwnscripts/workflows/Python%20package/badge.svg)
+
 Very simple script(s) to hasten binary exploit creation. To use, run
 ```bash
 git clone https://github.com/152334H/pwnscripts

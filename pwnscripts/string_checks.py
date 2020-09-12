@@ -50,16 +50,16 @@ def is_PIE_address(addr: int) -> bool:
     if is_wsl():
         log.warn("The memory mappings for wsl1 are not always congruent"+\
                 " with that of normal linux. Some things may break.")
-    regex = '0x5[56][0-9a-f]{10}'
+    regex = ADDRESS_REGEX['pie'][context.arch]
     return addr > 0 and search(regex, hex(addr))
 
 def is_stack_address(addr: int) -> bool:
-    regex = '0x7ff.*' if context.arch == 'amd64' else '0xff.*'
+    regex = ADDRESS_REGEX['stack'][context.arch]
     return addr > 0 and search(regex, hex(addr))
 
 def is_libc_address(addr: int) -> bool:
     '''Heuristic for _potential_ libc addresses'''
-    regex = '0x7f.*' if context.arch == 'amd64' else '0xf7.*'
+    regex = ADDRESS_REGEX['libc'][context.arch]
     return addr > 0 and search(regex, hex(addr)) and not is_stack_address(addr)
 
 def is_base_address(addr: int) -> bool:

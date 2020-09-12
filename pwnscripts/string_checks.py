@@ -73,4 +73,11 @@ def is_address(addr: int) -> bool:
 
 def is_canary(addr: int) -> bool:
     '''Heuristic for _potential_ canary values'''
-    return addr % 0x100 == 0 and b'\x00' not in pack(addr)[1:] and not is_address(addr)
+    return addr % 0x100 == 0 and pack(addr).count(b'\x00') < 3 and not is_address(addr)
+
+ADDRESS_REGEX = {
+    'pie': {'amd64': '0x5[56][0-9a-f]{10}', 'i386': '0x5[56][0-9a-f]{10}'},
+    'stack': {'amd64': '0x7ff.*', 'i386': '0xff.*'},
+    'libc': {'amd64':'0x7f.*', 'i386': '0xf7.*'},
+    'canary': {'amd64': '.*00', 'i386': '.*00'}
+}

@@ -2,6 +2,7 @@
 Some of these test cases are "probabilistic", in that they
 can arbitrarily fail or pass depending on <undetermined factor>.
 '''
+#TODO: Figure out why some tests have a small chance of failure.
 import unittest as ut
 # Unfortunately, pytest interprets every `test.*` function as a testable function, so no import * here
 from pwnscripts import system, context, log, attrib_set_to, fsb, extract_first_hex, fmtstr_payload, is_wsl, extract_all_hex, pack, path
@@ -38,7 +39,7 @@ class BinTests(ut.TestCase):
             # Finally, grab back the input (and verify that the flag is there)
             lastline = r.recvall().split(b'\n')[-1]
             r.close()
-            self.assertEqual(lastline, b'flag{Goodjob}')
+            self.assertEqual(lastline, b'flag{Goodjob}')    
             
         finally:
             system('rm 1.out')
@@ -61,7 +62,7 @@ class BinTests(ut.TestCase):
                 r.send(l)
                 return r.recvline()
 
-            canary_off = fsb.find_offset.canary(printf) # This part may fail with a 7/256++ chance
+            canary_off = fsb.find_offset.canary(printf) # This part may fail by chance. Investigating why.
             main_off = fsb.find_offset.PIE(printf, main%0x100)
             buffer = fsb.find_offset.buffer(printf, maxlen=63)
 

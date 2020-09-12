@@ -38,4 +38,12 @@ jobs:
       run: |
         chmod +x examples/*.c # Might be rw-
         export TERM=linux export TERMINFO=/etc/terminfo
-        pytest
+        pytest || pytest    # Bad idea
+    - name: Build and publish
+      env:
+        TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
+        TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
+      run: |
+        pip install setuptools wheel twine
+        python setup.py sdist bdist_wheel
+        twine upload dist/*

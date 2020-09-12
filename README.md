@@ -1,7 +1,9 @@
 # pwnscripts
-![Build Status](https://github.com/152334H/pwnscripts/workflows/Python%20package/badge.svg)
+[![Tests](https://github.com/152334H/pwnscripts/workflows/Python%20package/badge.svg)](https://github.com/152334H/pwnscripts/actions)
+[![PyPI package](https://badge.fury.io/py/pwnscripts.svg)](https://pypi.org/project/pwnscripts/)
+[![Python](https://img.shields.io/pypi/pyversions/pwnscripts)](https://www.python.org/downloads/)
 
-Very simple script(s) to hasten binary exploit creation. To use, run
+Very simple script(s) to hasten binary exploit creation. To use, `pip install pwnscripts` OR run
 ```bash
 git clone https://github.com/152334H/pwnscripts
 cd pwnscripts
@@ -87,7 +89,9 @@ File in an [issue](https://github.com/152334H/pwnscripts/issues), if you can. Wi
 
 ## Updates
 
-pwnscripts is in development; if historical behaviour is broken it may be listed here
+pwnscripts is out of pre-alpha, and will follow [Semantic Versioning](https://semver.org/) where possible.
+
+v0.1.0 - Initial release
 
 20-09
 

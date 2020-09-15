@@ -1,13 +1,11 @@
 # This workflow will install Python dependencies, run tests and lint with a variety of Python versions
 # For more information see: https://help.github.com/actions/language-and-framework-guides/using-python-with-github-actions
 
-name: Python package
+name: Dev pytest
 
 on:
-  push:
-    branches: [ master ]
-#  pull_request:
-#    branches: [ master ]
+  pull_request:
+    branches: [ master, dev ]
 
 jobs:
   build:
@@ -42,11 +40,3 @@ jobs:
         chmod +x examples/*.c # Might be rw-
         export TERM=linux export TERMINFO=/etc/terminfo
         pytest || pytest    # Bad idea
-    - name: Build and publish
-      env:
-        TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}
-        TWINE_PASSWORD: ${{ secrets.PYPI_PASSWORD }}
-      run: |
-        pip install setuptools wheel twine
-        python setup.py sdist bdist_wheel
-        twine upload dist/*

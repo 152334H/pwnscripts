@@ -5,7 +5,7 @@ can arbitrarily fail or pass depending on <undetermined factor>.
 #TODO: Figure out why some tests have a small chance of failure.
 import unittest as ut
 # Unfortunately, pytest interprets every `test.*` function as a testable function, so no import * here
-from pwnscripts import system, context, log, attrib_set_to, fsb, extract_first_hex, fmtstr_payload, is_wsl, extract_all_hex, pack, path
+from pwnscripts import system, context, log, attrib_set_to, fsb, extract_first_hex, fmtstr_payload, is_wsl, extract_all_hex, pack, path, CalledProcessError, libc, config
 
 class BinTests(ut.TestCase):
     def test_A_common_sense(self):
@@ -13,6 +13,23 @@ class BinTests(ut.TestCase):
         for i in range(1,3): assert not path.isfile('%d.out'%i)
         assert path.isfile('/usr/bin/gcc')
     
+    def test_B_libc(self):
+        print()
+        def lazy_libc(*a): return lambda: libc(*a)
+        db_dir = 'libc-database'
+        for err, args in [  (ValueError, ['aaaaaa']),           # Missing args
+                            (IOError, ['pwnscripts', 'a']),     # Bad libc-db folder
+                            (CalledProcessError, [db_dir, 'a']),# Inexistant binary
+                            (TypeError, [db_dir, None, 'a']),   # Invalid ID
+            ]:
+            self.assertRaises(err, lazy_libc(*args))
+
+        config.LIBC_DB_DIR = db_dir
+        db = libc(binary='examples/libc.so.6')	# Good
+        db.calc_base('scanf', 0x7fffa3b8b040)	# Test this func
+        assert db.address == 0x7fffa3b10000		# Make sure address was set
+        assert db.symbols['str_bin_sh'] == db.address + 0x1b3e9a	# ELF inherited property
+ 
     def test_printf_buffer_bruteforce(self):
         print()
         try:

@@ -18,6 +18,15 @@ def _one_gadget(filename):
 '''TODO
 "Run with this libc" function? (see: pwnlib.util.misc.parse_ldd_output)
 '''
+'''TODO
+Make use of pwntools' ELF functionality for simplicity.
+We should inherit from pwnlib.elf.elf.ELF().
+Example:
+e = ELF('./libc.so')
+puts_addr = ... #leaked
+e.address = puts_addr-e.symbols['puts']
+# After here, e.symbols[] works with base automagically!
+'''
 
 def libc_find(db_dir: str, leaks: Dict[str,int]):
     '''identify a libc id from a `dict` of leaked addresses.
@@ -138,8 +147,8 @@ class libc_db():
         '''
 
         assert self.one_gadget is not None
-        system("one_gadget '" + self.libpath+".so'")
         if option is None:
+            system("one_gadget '" + self.libpath+".so'")
             option = int(options('choose the gadget to use: ', list(map(hex,self.one_gadget))))
         assert 0 <= option < len(self.one_gadget)
         return self.one_gadget[option]

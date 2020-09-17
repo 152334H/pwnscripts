@@ -36,7 +36,7 @@ from pwnlib.context import context
 from pwnlib.util.cyclic import cyclic, cyclic_find
 from pwnlib.util.packing import p32
 from pwnscripts import config
-from pwnscripts.string_checks import extract_first_hex, is_canary, attrib_set_to, offset_match, is_libc_address, is_PIE_address
+from pwnscripts.string_checks import extract_first_hex, is_canary, offset_match, is_libc_address, is_PIE_address
 log = getLogger('pwnlib.exploit')
 def _sendprintf(requirement: Callable[[int,Optional[str]],bool]=None, has_regex: bool=False):
     if requirement is None: return partial(_sendprintf, has_regex=has_regex)    # ???
@@ -47,7 +47,6 @@ def _sendprintf(requirement: Callable[[int,Optional[str]],bool]=None, has_regex:
         # Actual code
         for i in range(config.PRINTF_MIN, config.PRINTF_MAX):   # an unaligned printf will fail here
             payload = 'A'*8 + '%{}$p\n'.format(i)
-            #with attrib_set_to(context, 'log_level', 'WARN') as _:  # leave quieting to user
             extract = extract_first_hex(sendprintf(payload))    # expect @context.quiet here
             log.debug('pwnscripts: extracted ' + hex(extract))
             if extract == -1: continue
@@ -93,7 +92,6 @@ def buffer(sendprintf: Callable[[bytes],bytes], maxlen=20) -> int:
         '''
         for offset in range(config.PRINTF_MIN+guess_n-1, config.PRINTF_MAX+guess_n-1, guess_n):
             payload = cyclic(guess_n*context.bytes) + "0x%{}$x\n".format(offset).encode()
-            #with attrib_set_to(context, 'log_level', 'WARN') as _:
             extract = extract_first_hex(sendprintf(payload))    # Error will be -1
             if extract != -1 and 0 <= (found := cyclic_find(p32(extract))) < len(payload):
                 assert found%context.bytes == 0 # if not, the offset is non-aligned

@@ -25,7 +25,7 @@ class BinTests(ut.TestCase):
                 return r.recvline()
             
             # Let's say we want to write to s[64]. We first find the printf() offset to s[]:
-            with attrib_set_to(context, 'log_level', 'info') as _:  # show info for testing purposes
+            with context.local(log_level='info'):   # show info for testing purposes
                 offset = fsb.find_offset.buffer(printf, maxlen=49)  # maxlen is 50-1 (-1 due to fgets)
             
             # Then, make use of pwntools' fmtstr library to write to there:
@@ -57,7 +57,7 @@ class BinTests(ut.TestCase):
                 r = process(**proc)
                 r.send(l)
                 return r.recvline()
-            with attrib_set_to(context, 'log_level', 'info') as _:  # show info for testing purposes
+            with context.local(log_level='info'):   # show info for testing purposes
                 buf_off = fsb.find_offset.buffer(printf, maxlen=63)
 
             # send a printf GOT table leak exploit
@@ -71,7 +71,7 @@ class BinTests(ut.TestCase):
             libc_dict = dict(zip(GOT_table, libc_addrs))
             path_to_libcdb = input("path to libc-database: ").strip()
             assert path.isdir(path_to_libcdb)
-            with attrib_set_to(context, 'log_level', 'info') as _:  # show info for testing purposes
+            with context.local(log_level='info'):   # show info for testing purposes
                 db = libc_find(path_to_libcdb, libc_dict)
 
             # test the libc id found
@@ -89,8 +89,9 @@ class BinTests(ut.TestCase):
             return
         try:
             system('./examples/3.c')
-            with attrib_set_to(context, 'log_level', 'warn') as _:
-                context.binary = '3.out'    # quieten this part
+            context.log_level = 'warn'  # Why not use context.local()? Well,
+            context.binary = '3.out'    # we need access to context.binary,
+            context.log_level = 'info'  # which isn't available within a with: statement
             main = context.binary.symbols['main']
             win = context.binary.symbols['win']
 

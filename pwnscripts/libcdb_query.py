@@ -12,6 +12,7 @@ from pwnlib.util.misc import which
 from pwnlib.util.lists import concat
 from pwnscripts.string_checks import is_base_address
 from pwnscripts import config
+from pwnscripts.context import context
 log = getLogger('pwnlib.exploit')
 # Helpfully taken from the one_gadget README.md
 def _one_gadget(filename):
@@ -30,6 +31,7 @@ e.address = puts_addr-e.symbols['puts']
 # After here, e.symbols[] works with base automagically!
 '''
 
+# BEGIN DEPRECATED
 def libc_find(db_dir: str, leaks: Dict[str,int]):
     '''identify a libc id from a `dict` of leaked addresses.
     the `dict` should have key-pairs of func_name:addr
@@ -156,12 +158,66 @@ class libc_db():
             option = int(options('choose the gadget to use: ', list(map(hex,self.one_gadget))))
         assert 0 <= option < len(self.one_gadget)
         return self.one_gadget[option]
+# END DEPRECATED
 
-class libc_database():  # python wrapper for libc-database functions
-    def __init__(self, db_dir: str=None):
-        if db_dir is not None: self.db_dir = db_dir
-        elif config.LIBC_DB_DIR is not None: self.db_dir = config.LIBC_DB_DIR
-        else: raise ValueError('libc_database(...) requires db_dir="/path/to/libc-database" as arg')
+def _db(db_dir: str):
+    '''Simple wrapper to return a libc_database() object for a given
+    `db_dir`, using context.libc_database if db_dir is None.
+    Not meant for public usage. Will raise IOError if everything is None.
+    >>> '''
+    if db_dir is not None:  # Always use db_dir if possible
+        return libc_database(db_dir)
+    elif context.libc_database is not None: # If not None
+        return context.libc_database
+    else:
+        raise IOError("No libc-database found!\n"
+        "Either provide db_dir='/path/to/libc-database', or "
+        "set context.libc_database = '/path/to/libc-database'.")
+
+# TODO: allow db_dir=None by querying from https://libc.rip API.
+class libc_database():
+    # TODO: docstring
+    def __init__(self, db_dir: str):
+        if path.isdir(db_dir):
+            self.db_dir = path.abspath(db_dir)
+        else:
+            raise IOError("Directory " + repr(db_dir) + " does not exist!"
+            " libc_database() requires a valid /path/to/libc-database.")
+
+    def libc_find(self, leaks: Dict[str,int]):
+        '''identify a libc id from a `dict` of leaked addresses,
+        returning its libc() representation on success.
+        Raises IndexError if a single libc id is not isolated.
+
+        Arguments:
+            `leaks`: dict with key-pairs of symbol_name:addr
+        
+        Returns:
+            a `libc()` object with `address` set in accordance with the
+            leaked addresses provided in `leaks`.
+        # TODO: write a test for this docstring. Note that libc assignment doesn't work that way!
+        >>> db = context.libc_database = '/path/to/libc-database'
+        >>> context.libc = db.libc_find({'printf': 0x7fff00064e80})
+        Traceback (most recent call last): ...
+        >>> context.libc = db.libc_find({'printf': 0x7fff00064e80, 'strstr': 0x7fff0009eb20})
+        [*] b'found libc! id: libc6_2.27-3ubuntu1_amd64'
+        >>> context.libc.address
+        0x7fff00000000
+        '''
+        args = concat([(k,hex(v)) for k,v in leaks.items()])
+        found = self.find(*args).strip().split(b'\n')
+
+        if len(found) == 1: # if a single libc was isolated
+            # NOTE: assuming ./find output format is "<url> (<id>)". 
+            # NOTE (continued): this behaviour has changed in the past!
+            libcid = found[0].split(b'(')[-1][:-1]  
+            log.info(b'found libc! id: ' + libcid)
+            lib = libc(db=self, id=libcid.decode('utf-8'))
+            # Also help to calculate self.base
+            a_func, an_addr = list(leaks.items())[0]
+            lib.calc_base(a_func, an_addr)
+            return lib
+        raise IndexError("incorrect number of libcs identified: %d" % len(found))
 
     def id(self, binary: str) -> str:
         '''Identify a libc.so binary, and auto-add it if it doesn't exist
@@ -173,13 +229,18 @@ class libc_database():  # python wrapper for libc-database functions
         try:    # EXPECTED OUTPUT: b'<identifier>\n'
             return self.identify(binary)[:-1].decode()
         except CalledProcessError:  # assume that a hitherto-unknown libc binary was given
-            log.warn(''.join(("the file %r was not found" % binary,
-                        " in the libc-database. Assuming it is a libc file.")))
-            add = path.join(self.db_dir, 'add')
-            output = check_output([add, binary]).decode()       # Intentionally uncatch errors
+            log.warn("the file " + repr(binary) + " was not found"
+                    " in the libc-database. Assuming it is a libc file.")
+            output = self.add(binary).decode()                  # Intentionally uncatch errors
             return search('local-[0-9a-f]+', output).group(0)   #!assumes self.binary doesn't match!
 
-    def __getattr__(self, attr):    # generic function
+    def __getattr__(self, attr):
+        '''Generic wrapper to subprocess.check_output() to enable running
+        all of the libc-database scripts as libc_database() attributes.
+        e.g.
+        >>> context.libc_database.dump('libc6_2.27-3ubuntu1_amd64')
+        # TODO: get output here
+        '''
         def default(*args):
             script = path.join(self.db_dir, attr)
             if not path.isfile(script):
@@ -193,30 +254,54 @@ class libc(ELF):
     '''Class to handle libc-related things
     Inherrits from pwnlib.elf.elf.ELF, so all non-init methods from ELF
     will be available for this.'''
-    def __init__(self, db_dir: str=None, binary: str=None, id: str=None):
-        '''initialise a libc database using identifier `id`,
-        or with `binary`="./path/to/libc.so.6",
-        given the location `db_dir` of a local libc-database.
-        If `db_dir` is None, libc() will try using `pwnscripts.config.LIBC_DB_DIR`.
+    def __init__(self, binary: str=None, id: str=None, *, db_dir: str=None, db=None):
+        '''initialise a libc database using `binary`="/path/to/libc.so.6", or with identifier `id`,
+        given the location `db_dir` of a local libc-database, or a libc_database() instance, `db`.
+        If both `db` and `db_dir` is None, libc() will try using `context.libc_database`.
 
-        >>> lib = libc('/path/to/libc-database', id='libc6_2.27-3ubuntu1_amd64')
-        >>> lib = libc('/path/to/libc-database', binary='./libc.so.6')
+        >>> lib = libc(db_dir='/path/to/libc-database', id='libc6_2.27-3ubuntu1_amd64')
+        or alternatively,
+        >>> context.libc_database = '/path/to/libc-database'
+        >>> context.libc = './libc.so.6'
+
+        Arguments:
+            `binary`:
+                a filepath to a libc binary.
+
+            `id`:
+                a libc-database identifier for the binary
+            
+            `db_dir`:
+                a filepath to a libc-database.
+
+            `db`:
+                an existing libc_database() object.
+                This will take precedence over `db_dir`, if (for whatever reason)
+                both happen to be provided.
+        
+        Returns:
+            a libc() object.
         '''
-        self.db = libc_database(db_dir)
+        # init a local libc-database
+        if db is None:
+            self.db = _db(db_dir)
+        else:
+            self.db = db
+        
         if binary is not None:
             id = self.db.id(binary)
         if id is not None:  # Assume the id is valid
             self.id = id
             self.libpath = path.join(self.db.db_dir, 'db', id)
             self.binary = self.libpath + '.so'
-            super().__init__(binary)
+            super().__init__(self.binary)   # Call ELF() on self.binary
             self.__id_init__()
         else:
             raise ValueError('libc(...) requires binary="/path/to/libc.so.6"'+\
                              ' or identifer="<libc identifier>" as an argument')
     
     def __id_init__(self):
-        # load up all library symbols; adds things like str_bin_sh
+        # load up all library symbols; adds things like str_bin_sh uncaught by ELF()
         with open(self.libpath+'.symbols') as f:    # Weird thing: this breaks if 'rb' is used.
             symbols = dict(l.split() for l in f.readlines())
         for k in symbols: self.symbols[k] = int(symbols[k], 16)

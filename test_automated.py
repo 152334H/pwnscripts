@@ -1,11 +1,13 @@
 '''A number of tests for pwnscripts.
-Some of these test cases are "probabilistic", in that they
-can arbitrarily fail or pass depending on <undetermined factor>.
+These tests are checked with Github Actions, and should all work on a fresh installation of pwnscripts.
+
+This file also serves to demonstrate some of the features of pwnscripts,
+showing off common use-cases and best practices.
 '''
 #TODO: Figure out why some tests have a small chance of failure.
 import unittest as ut
 # Unfortunately, pytest interprets every `test.*` function as a testable function, so no import * here
-from pwnscripts import system, context, log, fsb, extract_first_hex, fmtstr_payload, is_wsl, extract_all_hex, pack, path, CalledProcessError, libc, config
+from pwnscripts import system, context, log, fsb, extract_first_hex, fmtstr_payload, is_wsl, extract_all_hex, pack, path, CalledProcessError, libc
 
 class BinTests(ut.TestCase):
     def test_A_common_sense(self):
@@ -15,23 +17,27 @@ class BinTests(ut.TestCase):
     
     def test_B_libc(self):
         print()
-        def lazy_libc(*a): return lambda: libc(*a)
-        db_dir = 'libc-database'
-        for err, args in [  (ValueError, ['aaaaaa']),           # Missing args
-                            (IOError, ['pwnscripts', 'a']),     # Bad libc-db folder
-                            (CalledProcessError, [db_dir, 'a']),# Inexistant binary
-                            (TypeError, [db_dir, None, 'a']),   # Invalid ID
-            ]:
-            self.assertRaises(err, lazy_libc(*args))
+        DB_DIR = 'libc-database'
+        argumentTests = [
+            (ValueError, {'db_dir': DB_DIR}),                           # missing args
+            (FileNotFoundError, {'db_dir': DB_DIR, 'id':''}),           # bad ID
+            (CalledProcessError, {'db_dir': DB_DIR, 'binary':''}),      # inexistant binary
+            (IOError, {'db_dir': '', 'binary':'examples/libc.so.6'}),   # bad libc-db folder
+        ]
+        for err, kwargs in argumentTests:
+            self.assertRaises(err, lambda: libc(**kwargs))
 
-        config.LIBC_DB_DIR = db_dir
-        with context.local(log_level='warn'):  	# Shut up ELF()
-            db = libc(binary='examples/libc.so.6')
-        db.calc_base('scanf', 0x7fffa3b8b040)	# Test this func
-        assert db.address == 0x7fffa3b10000		# Make sure address was set
-        assert db.symbols['str_bin_sh'] == db.address + 0x1b3e9a	# ELF inherited property
+        context.libc_database = DB_DIR
+        with context.local(log_level='warn'):   # Shut up ELF()
+            context.libc = 'examples/libc.so.6'
+
+        lib = context.libc  # Just to shorten (.) usage
+        orig_binsh = lib.symbols['str_bin_sh']
+        lib.calc_base('scanf', 0x7fffa3b8b040)      # Test this func
+        assert lib.address == 0x7fffa3b10000		# Make sure address was set
+        assert lib.symbols['str_bin_sh'] == lib.address + orig_binsh	# ELF inherited property
  
-    def test_printf_buffer_bruteforce(self):
+    def test_C_printf_buffer_bruteforce(self):
         print()
         try:
             system('./examples/1.c')    # compile the program
@@ -62,16 +68,17 @@ class BinTests(ut.TestCase):
         finally:
             system('rm 1.out')
         
-    def test_a_printf_alt_bruteforce(self):
+    def test_D_printf_alt_bruteforce(self):
         print()
         if is_wsl():
             log.info('Skipping this test due to wsl')
             return
         try:
             system('./examples/3.c')
-            context.log_level = 'warn'  # Why not use context.local()? Well,
-            context.binary = '3.out'    # we need access to context.binary,
-            context.log_level = 'info'  # which isn't available within a with: statement
+            # with context.local(log_level='warn'): context.binary = '3.out'
+            context.log_level = 'warn'  # Why not use context.local()? Need access to context.binary;
+            context.binary = '3.out'    # that isn't available inside a hypothetical with: statement.
+            context.log_level = 'info'
             main = context.binary.symbols['main']
             win = context.binary.symbols['win']
 

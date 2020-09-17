@@ -3,10 +3,10 @@
 #TODO: This module requires cleanup. It currently serves a dual purpose as a generic "util" module, which is not desirable.
 from re import findall, search
 from pwnlib.log import getLogger
-from pwnlib.context import context
 from pwnlib.util.misc import read
 from pwnlib.util.lists import group
 from pwnlib.util.packing import pack, unpack
+from pwnscripts.context import context
 log = getLogger('pwnlib.exploit')
 
 def offset_to_regex(addr: int) -> str:

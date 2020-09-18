@@ -15,6 +15,15 @@ class BinTests(ut.TestCase):
         assert path.isfile('/usr/bin/gcc')
     
     def test_libc_db(self):
+        '''This example shows how pwnscripts can quickly identify a remote libc id,
+        when no libc.so.6 is provided for the challenge.
+        The exploit leaks the GOT table with the fsb module, and then uses libc_find to
+        identify the id of the libc used.
+
+        This test is left outside of the automated tests, because it requires a fully downloaded
+        libc-database to function, which would take an unreasonably long time to initialise
+        for testing purposes.
+        '''
         print()
         try:
             system('./examples/2.c')    # compile the program
@@ -48,7 +57,6 @@ class BinTests(ut.TestCase):
             context.libc_database = path_to_libcdb
             with context.local(log_level='info'):   # show info for testing purposes
                 context.libc = context.libc_database.libc_find(libc_dict)
-                # NOTE: I have no idea how this leaks out into the global context. Danger!
 
             # test the libc id found
             r = process(**proc)

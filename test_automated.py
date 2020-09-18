@@ -16,6 +16,10 @@ class BinTests(ut.TestCase):
         assert path.isfile('/usr/bin/gcc')
     
     def test_B_libc(self):
+        '''A demonstration of
+        1. Error catching for poorly used libc() or libc_database()
+        2. common uses of context.libc_database, context.libc
+        '''
         print()
         DB_DIR = 'libc-database'
         argumentTests = [
@@ -23,6 +27,7 @@ class BinTests(ut.TestCase):
             (FileNotFoundError, {'db_dir': DB_DIR, 'id':''}),           # bad ID
             (CalledProcessError, {'db_dir': DB_DIR, 'binary':''}),      # inexistant binary
             (IOError, {'db_dir': '', 'binary':'examples/libc.so.6'}),   # bad libc-db folder
+            (ValueError, {'db': DB_DIR, 'binary':'examples/libc.so.6'}),# bad db
         ]
         for err, kwargs in argumentTests:
             self.assertRaises(err, lambda: libc(**kwargs))
@@ -38,6 +43,8 @@ class BinTests(ut.TestCase):
         assert lib.symbols['str_bin_sh'] == lib.address + orig_binsh	# ELF inherited property
  
     def test_C_printf_buffer_bruteforce(self):
+        '''A simple example of fsb.find_offset.
+        This behaviour is essentially already implemented in pwntools under FmtStr().'''
         print()
         try:
             system('./examples/1.c')    # compile the program
@@ -69,6 +76,14 @@ class BinTests(ut.TestCase):
             system('rm 1.out')
         
     def test_D_printf_alt_bruteforce(self):
+        '''A more complicated use case for fsb.find_offset.
+        This uses features that aren't available in pwntools.
+
+        3.c is a simple program that allows for a single printf(), followed by a buffer overflow.
+        The program is compiled with both a stack canary and PIE, so we use fsb.find_offset
+        to get the positions for a canary leak & a PIE leak, which can then be used for a simple
+        buffer overflow to jump to the win() function embedded within the binary.
+        '''
         print()
         if is_wsl():
             log.info('Skipping this test due to wsl')

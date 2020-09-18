@@ -21,15 +21,6 @@ def _one_gadget(filename):
 '''TODO
 "Run with this libc" function? (see: pwnlib.util.misc.parse_ldd_output)
 '''
-'''TODO
-Make use of pwntools' ELF functionality for simplicity.
-We should inherit from pwnlib.elf.elf.ELF().
-Example:
-e = ELF('./libc.so')
-puts_addr = ... #leaked
-e.address = puts_addr-e.symbols['puts']
-# After here, e.symbols[] works with base automagically!
-'''
 
 # BEGIN DEPRECATED
 def libc_find(db_dir: str, leaks: Dict[str,int]):
@@ -47,7 +38,8 @@ def libc_find(db_dir: str, leaks: Dict[str,int]):
     [*] b'found libc! id: libc6_2.27-3ubuntu1_amd64'
     <pwnscripts.libcdb_query.libc_db object at 0x000000000000>
     '''
-    
+    log.warn('libc_find() is Deprecated! Try using libc_database().libc_find().')
+
     args = concat([(k,hex(v)) for k,v in leaks.items()])
     found = check_output([path.join(db_dir, 'find'), *args]).strip().split(b'\n')
     
@@ -164,7 +156,16 @@ def _db(db_dir: str):
     '''Simple wrapper to return a libc_database() object for a given
     `db_dir`, using context.libc_database if db_dir is None.
     Not meant for public usage. Will raise IOError if everything is None.
-    >>> '''
+    >>> _db('inexistant_dir')
+    Traceback (most recent call last):
+    ...
+    OSError: ...
+    >>> _db('libc-database')
+    <pwnscripts.libcdb_query.libc_database object at 0x7ffffffffff0>
+    >>> context.libc_database = 'libc-database'
+    >>> _db(None)
+    <pwnscripts.libcdb_query.libc_database object at 0x7fffbffffff0>
+    '''
     if db_dir is not None:  # Always use db_dir if possible
         return libc_database(db_dir)
     elif context.libc_database is not None: # If not None
@@ -176,8 +177,21 @@ def _db(db_dir: str):
 
 # TODO: allow db_dir=None by querying from https://libc.rip API.
 class libc_database():
-    # TODO: docstring
+    '''An object to represent an existing libc-database stored locally.
+    All libc-database functions are available as object methods.
+    
+    >>> context.libc_database = 'libc-database'
+    >>> print( context.libc_database.dump().decode() )
+    offset___libc_start_main_ret = 0x21b97
+    offset_system = 0x000000000004f440
+    offset_dup2 = 0x00000000001109a0
+    offset_read = 0x0000000000110070
+    offset_write = 0x0000000000110140
+    offset_str_bin_sh = 0x1b3e9a
+    '''
     def __init__(self, db_dir: str):
+        '''initialise libc_database() from an existing database at `db_dir`.
+        Raises IOError if db_dir is not a directory.'''
         if path.isdir(db_dir):
             self.db_dir = path.abspath(db_dir)
         else:
@@ -195,13 +209,22 @@ class libc_database():
         Returns:
             a `libc()` object with `address` set in accordance with the
             leaked addresses provided in `leaks`.
-        # TODO: write a test for this docstring. Note that libc assignment doesn't work that way!
         >>> db = context.libc_database = '/path/to/libc-database'
         >>> context.libc = db.libc_find({'printf': 0x7fff00064e80})
-        Traceback (most recent call last): ...
+        Traceback (most recent call last):
+        File "<stdin>", line 1, in <module>
+        File "/path/to/pwnscripts/pwnscripts/libcdb_query.py", line 234, in libc_find
+            raise IndexError("incorrect number of libcs identified: %d" % len(found))
+        IndexError: incorrect number of libcs identified: 4
         >>> context.libc = db.libc_find({'printf': 0x7fff00064e80, 'strstr': 0x7fff0009eb20})
         [*] b'found libc! id: libc6_2.27-3ubuntu1_amd64'
-        >>> context.libc.address
+        [*] '/path/to/pwnscripts/libc-database/db/libc6_2.27-3ubuntu1_amd64.so'
+            Arch:     amd64-64-little
+            RELRO:    Partial RELRO
+            Stack:    Canary found
+            NX:       NX enabled
+            PIE:      PIE enabled
+        >>> hex(context.libc.address)
         0x7fff00000000
         '''
         args = concat([(k,hex(v)) for k,v in leaks.items()])
@@ -238,8 +261,14 @@ class libc_database():
         '''Generic wrapper to subprocess.check_output() to enable running
         all of the libc-database scripts as libc_database() attributes.
         e.g.
-        >>> context.libc_database.dump('libc6_2.27-3ubuntu1_amd64')
-        # TODO: get output here
+        >>> output = context.libc_database.dump('libc6_2.27-3ubuntu1_amd64')
+        >>> print(output.decode())
+        offset___libc_start_main_ret = 0x21b97
+        offset_system = 0x000000000004f440
+        offset_dup2 = 0x00000000001109a0
+        offset_read = 0x0000000000110070
+        offset_write = 0x0000000000110140
+        offset_str_bin_sh = 0x1b3e9a
         '''
         def default(*args):
             script = path.join(self.db_dir, attr)
@@ -285,8 +314,10 @@ class libc(ELF):
         # init a local libc-database
         if db is None:
             self.db = _db(db_dir)
-        else:
+        elif type(db) == libc_database:
             self.db = db
+        else:
+            raise ValueError("`db`="+repr(db)+"does not seem to be an instance of libc_database().")
         
         if binary is not None:
             id = self.db.id(binary)

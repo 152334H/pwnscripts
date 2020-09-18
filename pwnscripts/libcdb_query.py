@@ -20,6 +20,13 @@ def _one_gadget(filename):
 
 '''TODO
 "Run with this libc" function? (see: pwnlib.util.misc.parse_ldd_output)
+def TODO_libdir(id: str):
+    if this id doesn't exist:
+       assert that the lib doesn't match local-* (maybe add this as a libc property)
+       run libc_database.download(id) (assume subprocess will raise any important errors)
+    return db_dir + 'libs' + id
+
+def TODO_runwith():
 '''
 
 # BEGIN DEPRECATED
@@ -390,4 +397,4 @@ class libc(ELF):
             system("one_gadget '" + self.libpath+".so'")
             option = int(options('choose the gadget to use: ', list(map(hex,self.one_gadget))))
         assert 0 <= option < len(self.one_gadget)
-        return self.one_gadget[option]
+        return self.one_gadget[option] + self.address

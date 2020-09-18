@@ -141,7 +141,9 @@ File in an [issue](https://github.com/152334H/pwnscripts/issues), if you can. Wi
 
 ## Updates
 
-v0.2.0 - libc-database update
+**v0.2.1** - Hotfix: `libc.select_gadget()` will return with the correct `libc.address` adjusted value
+
+**v0.2.0** - libc-database update
 
 *New features*
  * `pwnlib.context.context` is now extended for pwnscripts: `context.libc` and `context.libc_database` have been added as extensions.
@@ -159,11 +161,11 @@ v0.2.0 - libc-database update
  * Lots and lots of documentation + tests
 
 
-v0.1.0 - Initial release
+**v0.1.0** - Initial release
 
 pwnscripts is out of pre-alpha, and will follow [Semantic Versioning](https://semver.org/) where possible.
 
-20-09
+**20-09**
 
 Begin following PEP 440
 
@@ -175,13 +177,13 @@ libc_db() can (must) now be initialised with either a filepath to a libc.so.6 `b
 
 This breaks the original behaviour of allowing e.g. `libc_db('/path/to/libc-database', '<identifier>')`
 
-20-08.1
+**20-08.1**
 
 NEW: printf() functions are now kept under the `pwnscripts.fsb` module. Older prototypes for find_printf_* functions remain available for now.
 
 Addition of a lot of docstrings, plus example binaries.
 
-20-08
+**20-08**
 
 Added a lot of whitespace.
 
@@ -191,7 +193,7 @@ Minor adjustments to *printf*. Logging is suppressed for offset bruteforcing; ne
 
 Extended readme.
 
-20-06
+**20-06**
 
 Added module packaging stuff, so that `pip install -e .` works
 

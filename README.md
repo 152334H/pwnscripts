@@ -17,25 +17,103 @@ context.binary = './my_challenge'
 ...
 ```
 
+Additionally, the `libc_database()` extension of pwnscripts requires the [libc-database](https://github.com/niklasb/libc-database).
+
 You might want to look at some of the examples in `user_tests_and_examples.py`.
 
 ## Features
 
-Current features:
-  * `libc_db`: a basic class for dealing with the libc-database project. **Unlike LibcSearcher** (for now), this class has a wrapper to help with finding `one_gadget`s as well.
+Pwnscripts has a number of different features.
+
+### Libc
+Things like [LibcSearcher](https://github.com/lieanu/LibcSearcher) have always felt incomplete.
+
+Pwnscripts provides two libc classes: `libc()` and `libc_database()`. The easiest way to start with both is with `context`:
+```python
+context.libc_database = '/path/to/libc-database'  # https://github.com/niklasb/libc-database
+context.libc = '/path/to/pwnscripts/examples/libc.so.6'
+```
+Anything you can run with `./libc-database/[executable]` is available as a `libc_database()` method: 
+```python
+>>> context.libc_database.dump('libc6_2.27-3ubuntu1_amd64')
+b'offset___libc_start_main_ret = 0x21b97\noffset_system = 0x000000000004f440\noffset_dup2 = 0x00000000001109a0\noffset_read = 0x0000000000110070\noffset_write = 0x0000000000110140\noffset_str_bin_sh = 0x1b3e9a\n'
+>>> output = context.libc_database.add()
+>>> print(output.decode())
+Adding local libc /path/to/pwnscripts/examples/libc.so.6 (id local-18292bd12d37bfaf58e8dded9db7f1f5da1192cb  /path/to/pwnscripts/examples/libc.so.6)
+  -> Writing libc /path/to/pwnscripts/examples/libc.so.6 to db/local-18292bd12d37bfaf58e8dded9db7f1f5da1192cb.so
+  -> Writing symbols to db/local-18292bd12d37bfaf58e8dded9db7f1f5da1192cb.symbols
+  -> Writing version info
+```
+`libc_database()` also has a few additional methods; you can look at the [tests](https://github.com/152334H/pwnscripts/blob/master/test_automated.py) and [examples](https://github.com/152334H/pwnscripts/blob/master/user_tests_and_examples.py) and documentation to see.
+
+The `libc()` object is a subclass of pwntools' `pwnlib.elf.elf.ELF()`. It starts off with a base address of `0`, but you can change that to match a remote executable by providing it with leaked addresses:
+```python
+>>> context.libc.calc_base('scanf', 0x7fffa3b8b040) # Provide a leaked address to libc
+>>> context.libc.address
+0x7fffa3b10000
+>>> context.libc.symbols['str_bin_sh']  # Symbols from libc-database are stored in context.libc
+0x7fffa3cc3e9a
+```
+`libc()` provides `one_gadget` integration in the form of an interactive selection:
+```python
+>>> context.libc.select_gadget()
+0x4f2c5 execve("/bin/sh", rsp+0x40, environ)
+constraints:
+  rsp & 0xf == 0
+  rcx == NULL
+
+0x4f322 execve("/bin/sh", rsp+0x40, environ)
+constraints:
+  [rsp+0x40] == NULL
+
+0x10a38c execve("/bin/sh", rsp+0x70, environ)
+constraints:
+  [rsp+0x70] == NULL
+ [?] choose the gadget to use: 
+       1) 0x4f2c5
+       2) 0x4f322
+       3) 0x10a38c
+     Choice 
+```
+You're free to shut up the interactive menu by giving `.select_gadget()` an argument:
+```python
+>>> context.libc.select_gadget(1)
+0x4f322
+```
+More features exist, but this is already too long.
+
+### Format string exploitation
+pwnscripts provides the `fsb` module, which can be split further into:
+  * `.find_offset`: helper functions to bruteforce wanted printf offsets.
+
+    If you've ever found yourself spamming `%n$llx` into a terminal: this module will automate away all that. Take a look at the [example code](user_tests_and_examples.py) to see how.
+
+    This already partially exists as a feature in pwntools (see `pwnlib.fmtstr.FmtStr`), but pwnscripts expands functionality by having bruteforcers for other important printf offsets, including
+    1. `canary`s, for defeating stack protectors,
+    2. `stack` addresses, to make leaking a stack pointer much easier,
+    3. other things like `code` addresses with more niche purposes
+  * `.leak`: a simple two-function module to make leaking values with `%s` a lot easier.
+
+    The simple idea is that you get a payload to leak printf values:
     ```python
-    db = libc_db('/path/to/libc-database', binary='/path/to/libc.so.6') # e.g. libc6_2.27-3ubuntu1.2_amd64
-    one_gadget = db.select_gadget() # Console will prompt for a selection.
-    ... <insert exploit code to leak libc address here> ...
-    # Let's say the libc address of `puts` was leaked as `libc_puts`
-    libc_base = db.calc_base('puts', libc_puts)
+    offset = fsb.find_offset.buffer(...) # == 6
+    payload = fsb.leak.deref_payload(offset, [0x400123, 0x600123])
+    print(payload)  # b'^^%10$s||%11$s$$#\x01@\x00#\x01`\x00'
     ```
-  * `ROP`: an extension of `pwnlib.rop.rop.ROP`. Core feature is to simplify ROP building outside of SIGROP:
+    And after sending the payload, extract the values with a helper function:
     ```python
-		>>> context.arch = 'amd64'
-		>>> r = ROP('./binary')
-		>>> r.system_call(0x3b, ['/bin/sh', 0, 0])
-		>>> print(r.dump())
+    r = remote(...)
+    r.sendline(payload)
+    print(fsb.leak.deref_extractor(r.recvline()))  # [b'\x80N\x03p\x94\x7f', b' \xeb\x04p\x94\x7f']
+    ```
+### Minor features
+Pwnscripts also comes with a few minor extensions and functions:
+* `ROP`: an extension of `pwnlib.rop.rop.ROP`. Core feature is to simplify ROP building outside of SIGROP:
+  ```python
+  >>> context.arch = 'amd64'
+  >>> r = ROP('./binary')
+  >>> r.system_call(0x3b, ['/bin/sh', 0, 0])
+  >>> print(r.dump())
 		0x0000:         0x41e4af pop rax; ret
 		0x0008:             0x3b
 		0x0010:         0x44a309 pop rdx; pop rsi; ret
@@ -46,52 +124,44 @@ Current features:
 		0x0038:         0x4022b4 syscall
 		0x0040:   b'/bin/sh\x00'
     ```
-  * `fsb`, which can be split further into
-    * `.find_offset`: helper functions to bruteforce wanted printf offsets.
-
-      If you've ever found yourself spamming `%n$llx` into a terminal: this module will automate away all that. Take a look at the [example code](user_tests_and_examples.py) to see how.
-
-      This already partially exists as a feature in pwntools (see `pwnlib.fmtstr.FmtStr`), but pwnscripts expands functionality by having bruteforcers for other important printf offsets, including
-      1. `canary`s, for defeating stack protectors,
-      2. `stack` addresses, to make leaking a stack pointer much easier,
-      3. other things like `code` addresses with more niche purposes
-    * `.leak`: a simple two-function module to make leaking values with `%s` a lot easier.
-
-      The simple idea is that you get a payload to leak printf values:
-      ```python
-      offset = fsb.find_offset.buffer(...) # == 6
-      payload = fsb.leak.deref_payload(offset, [0x400123, 0x600123])
-      print(payload)  # b'^^%10$s||%11$s$$#\x01@\x00#\x01`\x00'
-      ```
-      And after sending the payload, extract the values with a helper function:
-      ```python
-      r = remote(...)
-      r.sendline(payload)
-      print(fsb.leak.deref_extractor(r.recvline()))  # [b'\x80N\x03p\x94\x7f', b' \xeb\x04p\x94\x7f']
-      ```
  * other unlisted features in development
 
 Proper examples for `pwnscripts` are available in `examples/` and `user_tests_and_examples.py`.
 ## I tried using it; it doesn't work!
 
-File in an [issue](https://github.com/152334H/pwnscripts/issues), if you can. With a userbase of 1, it's hard to guess what might go wrong, but potentially:
+File in an [issue](https://github.com/152334H/pwnscripts/issues), if you can. With a single-digit userbase , it's hard to guess what might go wrong, but potentially:
  * pwnscripts is broken
  * Python is outdated (try python3.8+)
- * The challenge is neither i386 or amd64; other architectures aren't implemented (yet).
+ * libc-database is not properly installed/initalised (did you run ./get?)
+ * The binary provided is neither i386 or amd64; other architectures aren't implemented (yet).
  * The challenge is amd64, but `context.arch` wasn't set to `amd64`
 
      * Set `context.binary` appropriately, or set `context.arch` manually if no binary is given
- * The printf offset bruteforcing range is insufficient
-
-     * Overwrite `config.PRINTF_MAX` with an appropriate value.
-
- * The printf offset lies on an unaligned boundary. Some challenges are designed this way; workaround planned.
+ * Other unknown reasons. Try making a pull-request if you're interested.
 
 ## Updates
 
-pwnscripts is out of pre-alpha, and will follow [Semantic Versioning](https://semver.org/) where possible.
+v0.2.0 - libc-database update
+
+*New features*
+ * `pwnlib.context.context` is now extended for pwnscripts: `context.libc` and `context.libc_database` have been added as extensions.
+ * `pwnscripts.libcdb_query` has undergone a revamp:
+     * Two new classes have been created: `libc_database()` and `libc()`.
+     * `libc()` is the replacement for `libc_db()`, and inherits from `pwnlib.elf.elf.ELF` to simplify libc offset calculation.
+     * `libc_database()` is a class to represent an existing installation of the [`libc-database`](https://github.com/niklasb/libc-database)
+   
+   The older `libc_db()` class (and the associated `libc_find()`) will remain as deprecated features for the time being.
+
+*Bugfixes and internal changes*
+ * Internal code: removal of `attrib_set_to()` & replacement with `context.local` internally
+ * Tests & examples have been pruned to ensure that neither file has copied examples from the other.
+ * More error catching for libcdb_query.py
+ * Lots and lots of documentation + tests
+
 
 v0.1.0 - Initial release
+
+pwnscripts is out of pre-alpha, and will follow [Semantic Versioning](https://semver.org/) where possible.
 
 20-09
 

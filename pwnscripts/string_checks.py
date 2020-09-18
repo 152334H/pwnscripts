@@ -1,21 +1,13 @@
 '''Misc. functions that pwntools may/maynot already have
-TODO: This module requires cleanup
 '''
+#TODO: This module requires cleanup. It currently serves a dual purpose as a generic "util" module, which is not desirable.
 from re import findall, search
-from contextlib import contextmanager
 from pwnlib.log import getLogger
-from pwnlib.context import context
 from pwnlib.util.misc import read
 from pwnlib.util.lists import group
 from pwnlib.util.packing import pack, unpack
+from pwnscripts.context import context
 log = getLogger('pwnlib.exploit')
-
-# NOTE: put this somewhere more reasonable
-@contextmanager
-def attrib_set_to(obj: object, attr: str, addr):
-    temp = getattr(obj, attr, None)
-    try: yield setattr(obj, attr, addr)
-    finally: setattr(obj, attr, temp)
 
 def offset_to_regex(addr: int) -> str:
     return '.*' + hex(addr)[2:] + '$'

@@ -1,11 +1,13 @@
 '''A number of tests for pwnscripts.
-Some of these test cases are "probabilistic", in that they
-can arbitrarily fail or pass depending on <undetermined factor>.
+These tests are checked with Github Actions, and should all work on a fresh installation of pwnscripts.
+
+This file also serves to demonstrate some of the features of pwnscripts,
+showing off common use-cases and best practices.
 '''
 #TODO: Figure out why some tests have a small chance of failure.
 import unittest as ut
 # Unfortunately, pytest interprets every `test.*` function as a testable function, so no import * here
-from pwnscripts import system, context, log, attrib_set_to, fsb, extract_first_hex, fmtstr_payload, is_wsl, extract_all_hex, pack, path
+from pwnscripts import system, context, log, fsb, extract_first_hex, fmtstr_payload, is_wsl, extract_all_hex, pack, path, CalledProcessError, libc
 
 class BinTests(ut.TestCase):
     def test_A_common_sense(self):
@@ -13,7 +15,36 @@ class BinTests(ut.TestCase):
         for i in range(1,3): assert not path.isfile('%d.out'%i)
         assert path.isfile('/usr/bin/gcc')
     
-    def test_printf_buffer_bruteforce(self):
+    def test_B_libc(self):
+        '''A demonstration of
+        1. Error catching for poorly used libc() or libc_database()
+        2. common uses of context.libc_database, context.libc
+        '''
+        print()
+        DB_DIR = 'libc-database'
+        argumentTests = [
+            (ValueError, {'db_dir': DB_DIR}),                           # missing args
+            (FileNotFoundError, {'db_dir': DB_DIR, 'id':''}),           # bad ID
+            (CalledProcessError, {'db_dir': DB_DIR, 'binary':''}),      # inexistant binary
+            (IOError, {'db_dir': '', 'binary':'examples/libc.so.6'}),   # bad libc-db folder
+            (ValueError, {'db': DB_DIR, 'binary':'examples/libc.so.6'}),# bad db
+        ]
+        for err, kwargs in argumentTests:
+            self.assertRaises(err, lambda: libc(**kwargs))
+
+        context.libc_database = DB_DIR
+        with context.local(log_level='warn'):   # Shut up ELF()
+            context.libc = 'examples/libc.so.6'
+
+        lib = context.libc  # Just to shorten (.) usage
+        orig_binsh = lib.symbols['str_bin_sh']
+        lib.calc_base('scanf', 0x7fffa3b8b040)      # Test this func
+        assert lib.address == 0x7fffa3b10000		# Make sure address was set
+        assert lib.symbols['str_bin_sh'] == lib.address + orig_binsh	# ELF inherited property
+ 
+    def test_C_printf_buffer_bruteforce(self):
+        '''A simple example of fsb.find_offset.
+        This behaviour is essentially already implemented in pwntools under FmtStr().'''
         print()
         try:
             system('./examples/1.c')    # compile the program
@@ -27,7 +58,7 @@ class BinTests(ut.TestCase):
                 return r.recvline()
             
             # Let's say we want to write to s[64]. We first find the printf() offset to s[]:
-            with attrib_set_to(context, 'log_level', 'info') as _:  # show info for testing purposes
+            with context.local(log_level='info'):   # show info for testing purposes
                 offset = fsb.find_offset.buffer(printf, maxlen=49)  # maxlen is 50-1 (-1 due to fgets)
             
             # Then, make use of pwntools' fmtstr library to write to there:
@@ -44,15 +75,25 @@ class BinTests(ut.TestCase):
         finally:
             system('rm 1.out')
         
-    def test_a_printf_alt_bruteforce(self):
+    def test_D_printf_alt_bruteforce(self):
+        '''A more complicated use case for fsb.find_offset.
+        This uses features that aren't available in pwntools.
+
+        3.c is a simple program that allows for a single printf(), followed by a buffer overflow.
+        The program is compiled with both a stack canary and PIE, so we use fsb.find_offset
+        to get the positions for a canary leak & a PIE leak, which can then be used for a simple
+        buffer overflow to jump to the win() function embedded within the binary.
+        '''
         print()
         if is_wsl():
             log.info('Skipping this test due to wsl')
             return
         try:
             system('./examples/3.c')
-            with attrib_set_to(context, 'log_level', 'warn') as _:
-                context.binary = '3.out'    # quieten this part
+            # with context.local(log_level='warn'): context.binary = '3.out'
+            context.log_level = 'warn'  # Why not use context.local()? Need access to context.binary;
+            context.binary = '3.out'    # that isn't available inside a hypothetical with: statement.
+            context.log_level = 'info'
             main = context.binary.symbols['main']
             win = context.binary.symbols['win']
 

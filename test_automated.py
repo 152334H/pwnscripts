@@ -8,6 +8,7 @@ showing off common use-cases and best practices.
 import unittest as ut
 # Unfortunately, pytest interprets every `test.*` function as a testable function, so no import * here
 from pwnscripts import system, context, log, fsb, extract_first_hex, fmtstr_payload, is_wsl, extract_all_hex, pack, path, CalledProcessError, libc
+import os, glob
 
 class BinTests(ut.TestCase):
     def test_A_common_sense(self):
@@ -117,5 +118,16 @@ class BinTests(ut.TestCase):
         finally:
             system('rm 3.out')
     # TODO: tests for ROP
+    def test_E_libc(self):
+        '''Simple test to check that local-* libcs will crash for self.dir()
+        '''
+        print()
+        context.libc_database = 'libc-database'
+        context.libc_database.add('examples/libc.so.6')
+        context.libc = 'local-18292bd12d37bfaf58e8dded9db7f1f5da1192cb'
+        self.assertRaises(ValueError, context.libc.dir)
+
+        for f in glob.glob(context.libc.libpath+'*'):   # not that smart
+            os.remove(f)
 if __name__ == '__main__':
     ut.main()

@@ -20,13 +20,13 @@ def _one_gadget(filename):
 
 '''TODO
 "Run with this libc" function? (see: pwnlib.util.misc.parse_ldd_output)
-def TODO_libdir(id: str):
-    if this id doesn't exist:
-       assert that the lib doesn't match local-* (maybe add this as a libc property)
-       run libc_database.download(id) (assume subprocess will raise any important errors)
-    return db_dir + 'libs' + id
 
-def TODO_runwith():
+def run_with_libc():
+    from os import chdir, getcwd
+    prev = getcwd()
+    chdir(path.join(context.libc_database.db_dir, 'libs', context.libc.id))
+    return veccshell(context.binary.path, env={'LD_LIBRARY_PATH': "libc.so.6 ld-linux-x86-64.so.2"})
+    chdir(prev)
 '''
 
 # BEGIN DEPRECATED
@@ -329,6 +329,7 @@ class libc(ELF):
         if binary is not None:
             id = self.db.id(binary)
         if id is not None:  # Assume the id is valid
+            self.local = id[:6] == 'local-'
             self.id = id
             self.libpath = path.join(self.db.db_dir, 'db', id)
             self.binary = self.libpath + '.so'
@@ -398,3 +399,17 @@ class libc(ELF):
             option = int(options('choose the gadget to use: ', list(map(hex,self.one_gadget))))
         assert 0 <= option < len(self.one_gadget)
         return self.one_gadget[option] + self.address
+
+    def dir(self):
+        '''Get the '/path/to/libc-database/libs/self.id' for this libc
+        Will raise ValueError if the libc is a locally imported libc
+        '''
+        # Why use a method instead of an __init__ defined property?
+        # Some users might not appreciate needing to ./download every library they use.
+        if self.local:
+            raise ValueError("'local-*' libc can never have a libs/ directory!")
+        lib_dir = path.join(self.db.db_dir, 'libs', self.id)
+        if not path.isdir(lib_dir):     # if lib_dir doesn't exist, but it's not local-*
+            log.info('libs/ for id=%r was not found; downloading now' % self.id)
+            self.db.download(self.id)   # download it
+        return lib_dir

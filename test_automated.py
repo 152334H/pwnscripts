@@ -121,13 +121,18 @@ class BinTests(ut.TestCase):
     # TODO: tests for ROP
     def test_E_libc(self):
         '''Simple test to check that local-* libcs will crash for self.dir()
+
+        It's important that we *don't* run `context.libc = 'examples/libc.so.6' for this test.
+        Although it'll work fine on GitHub Actions, an actual user (like you) may have
+        a fully ./get'd libc-database, and 'examples/libc.so.6' will be identified as a non-local
+        lib if the binary filepath is passed to context.libc.
         '''
         print()
         LOCAL_ID = 'local-18292bd12d37bfaf58e8dded9db7f1f5da1192cb'
         context.libc_database = 'libc-database'
         if not path.isfile(path.join(context.libc_database.db_dir, 'db', LOCAL_ID+'.so')):
             context.libc_database.add('examples/libc.so.6')
-        context.libc = 'local-18292bd12d37bfaf58e8dded9db7f1f5da1192cb'
+        context.libc = LOCAL_ID
         self.assertRaises(ValueError, context.libc.dir)
 
         for f in glob.glob(context.libc.libpath+'*'):   # not that smart

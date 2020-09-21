@@ -69,6 +69,9 @@ class BinTests(ut.TestCase):
     # TODO: tests for ROP
     def test_C(self):
         ''' Run a process() with a specific libc version using libc.run_with()
+
+        This test demonstrates how `context.binary.process()` will change behaviour
+        to match `context.libc` (if it is set)
         '''
         print()
         try:

@@ -1,5 +1,5 @@
 '''Reinventing the wheel for LibcSearcher
-See examples/, or try starting with libc_db().
+See examples/, or try starting with libc().
 '''
 from re import search
 from glob import glob
@@ -391,7 +391,7 @@ class libc(ELF):
         assert 0 <= option < len(self.one_gadget)
         return self.one_gadget[option] + self.address
 
-    def dir(self):
+    def dir(self) -> str:
         '''Get the '/path/to/libc-database/libs/self.id' for this libc
         Will raise ValueError if the libc is a locally imported libc
         '''
@@ -405,7 +405,7 @@ class libc(ELF):
             self.db.download(self.id)   # download it
         return lib_dir
 
-    def run_with(self, binary: ELF, argv=[], *a, **kw):
+    def run_with(self, binary: ELF, argv=[], *a, **kw) -> process:
         '''Run a `binary` with arguments `argv` using this libc's associated libs/ path.
 
         Arguments:

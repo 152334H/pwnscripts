@@ -54,6 +54,23 @@ The `libc()` object is a subclass of pwntools' `pwnlib.elf.elf.ELF()`. It starts
 >>> context.libc.symbols['str_bin_sh']  # Symbols from libc-database are stored in context.libc
 0x7fffa3cc3e9a
 ```
+
+`pwnscripts` is smart about `context.binary`: if `context.libc` is set, `context.binary.process()` will run with that libc version:
+```bash
+$ gcc -x c - <<< 'int main(){printf("%p\n", printf);}'
+$ python3.8
+>>> from pwnscripts import *
+>>> context.log_level = 'warn'
+>>> context.libc_database = 'libc-database'
+>>> context.binary = './a.out'
+>>> context.libc = 'libc6_2.31-0ubuntu9_amd64'
+>>> context.binary.process().recvline()
+b'0x7fa0f3c3fe10\n'   # printf 0000000000064e10
+>>> context.libc = 'libc6_2.24-11+deb9u4_amd64'
+>>> context.binary.process().recvline()
+b'0x7fb99b69e190\n'   # printf 000000000004f190
+```
+
 `libc()` provides `one_gadget` integration in the form of an interactive selection:
 ```python
 >>> context.libc.select_gadget()
@@ -141,11 +158,19 @@ File in an [issue](https://github.com/152334H/pwnscripts/issues), if you can. Wi
 
 ## Updates
 
-Upcoming:
- * `context.libc.run_with()` to run an ELF with a specific libc version.
- * `context.libc.dir()` to get the `/path/to/libc-database/libs/libc.id/`
- * `ELF` now has an `.ldd_libs()` method to get a list of libs used by a binary.
+**v0.3.0** - libc update
+
+*New*
+ * Use `context.libc.run_with()` to run an `ELF()` with a specific libc version.
+   * This is reliant on `ld-linux.so`; no more `LD_PRELOAD` segfaults!
+   * `context.binary` is aware of `context.libc`, and will automagically use `.run_with()` where possible.
+   * Added `context.libc.dir()` to get the `/path/to/libc-database/libs/libc.id/`.
+   * Tests have been added for all of these things
+ * `ELF` now has an `.ldd_libs()` method to get a list of libs used by a binary on wsl.
  * `rop.system_call()` can now search for `'syscall; ret'` instructions.
+   * This is dependent on pwntools-dev
+
+No bugfixes come with this version.
 
 **v0.2.1** - Hotfix: `libc.select_gadget()` will return with the correct `libc.address` adjusted value
 

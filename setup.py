@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 with open("README.md", 'r') as f: long_desc = f.read()
 # Current effect: bundles everything in ./pwnscripts/. This excludes ./examples/.
 setup(name='pwnscripts',
-      version='0.2.1',
+      version='0.3.0',
       description='Simple pwntools QoL scripts',
       long_description=long_desc,
       long_description_content_type='text/markdown',

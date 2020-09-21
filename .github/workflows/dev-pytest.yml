@@ -35,6 +35,7 @@ jobs:
     - name: Grab libc-database
       run: |
         git clone --depth 1 https://github.com/niklasb/libc-database
+        apt-get install -y binutils file
     - name: Test with pytest
       run: |
         chmod +x examples/*.c # Might be rw-

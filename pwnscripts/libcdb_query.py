@@ -366,6 +366,13 @@ class libc(ELF):
         '''An interactive function to choose a preferred
         one_gadget requirement mid-exploit.
         
+        Arguments:
+            `option`: if given,
+                used to immediately select a one_gadget; interactive menu will be skipped
+
+        Returns:
+            address of the one_gadget, adjusted to match libc.address
+
         >>> one_gadget = lib.select_gadget()
         0x4f2c5 execve("/bin/sh", rsp+0x40, environ)
         constraints:
@@ -392,8 +399,11 @@ class libc(ELF):
         return self.one_gadget[option] + self.address
 
     def dir(self) -> str:
-        '''Get the '/path/to/libc-database/libs/self.id' for this libc
+        '''Get the '/path/to/libc-database/libs/self.id' for this libc;
+            download them using ./download if they do not exist
         Will raise ValueError if the libc is a locally imported libc
+
+        Returns: string path to the libs/ directory
         '''
         # Why use a method instead of an __init__ defined property?
         # Some users might not appreciate needing to ./download every library they use.

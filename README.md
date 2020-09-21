@@ -46,6 +46,8 @@ Adding local libc /path/to/pwnscripts/examples/libc.so.6 (id local-18292bd12d37b
 ```
 `libc_database()` also has a few additional methods; you can look at the [tests](https://github.com/152334H/pwnscripts/blob/master/test_automated.py) and [examples](https://github.com/152334H/pwnscripts/blob/master/user_tests_and_examples.py) and documentation to see.
 
+---
+
 The `libc()` object is a subclass of pwntools' `pwnlib.elf.elf.ELF()`. It starts off with a base address of `0`, but you can change that to match a remote executable by providing it with leaked addresses:
 ```python
 >>> context.libc.calc_base('scanf', 0x7fffa3b8b040) # Provide a leaked address to libc
@@ -157,6 +159,8 @@ File in an [issue](https://github.com/152334H/pwnscripts/issues), if you can. Wi
  * Other unknown reasons. Try making a pull-request if you're interested.
 
 ## Updates
+
+**v0.3.1** - Documentation; very minor README.md edit.
 
 **v0.3.0** - libc update
 

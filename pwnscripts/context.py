@@ -14,11 +14,14 @@ _pwnscripts_LOCALS = ['libc_database', 'libc', 'binary', 'clear']
 class ContextType(context.ContextType):
 	'''This is the extended class that inherits from
 	pwnlib.context.ContextType. You can use it to spawn a
-	_new_ context, but a new `ContextType()` will not affect
+	_new_ context, but a new `ContextType()` will not* affect
 	pwnlib's original internal `pwnlib.context.context`,
 	and consequently will not provide expected behaviour.
 
 	Basically, don't init this object unless you know what you're doing.
+
+	*Unfortunately, assigning to .binary *will* currently affect pwntools' context.
+	This is planned to be fixed.
 	'''
 	# Waiting for python3.9's dict unions here...
 	defaults = {**context.ContextType.defaults,
@@ -40,12 +43,6 @@ class ContextType(context.ContextType):
 			import pwnscripts.elf
 			binary = pwnscripts.elf.ELF(binary)
 		return binary
-		''' Future idea feature:
-		context.libc = # Some really obscure libc version
-		# Setting the context should automagically make process() spawn with the correct ld-linux
-		r = context.binary.process()
-		# Is this impossible? Maybe.
-		'''
 
 	@context._validator
 	def libc_database(self, db_dir: str):
@@ -90,6 +87,18 @@ class ContextWrapper(ContextType):
 	
 	This wrapper is highly prone to unexpected behaviour. If you're reading this
 	and you have a better programmatic suggestion, please raise an Issue/PullRequest!
+
+	An example of unexpected behaviour:
+	>>> with context.local(log_level='info'): context.arch = 'arm'
+	>>> context.arch == 'arm'
+	False
+	>>> with context.local(log_level='info'): context.binary = 'mybinary'
+	>>> context.binary is None
+	False
+	In the first instance, context.arch is not preserved (*expected behaviour*)
+	because it's assignment should be contained to the with-statement.
+	In the second instance, context.binary *is preserved* because it is one of the
+	overwritten methods in pwnscripts.
 	'''
 	def __setattr__(self, attr, value):
 		if attr not in _pwnscripts_LOCALS:

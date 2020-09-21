@@ -1,7 +1,8 @@
 '''Reinventing the wheel for LibcSearcher
-See examples/, or try starting with libc_db().
+See examples/, or try starting with libc().
 '''
 from re import search
+from glob import glob
 from typing import Dict
 from os import path, system
 from subprocess import check_output, CalledProcessError
@@ -10,6 +11,7 @@ from pwnlib.log import getLogger
 from pwnlib.elf.elf import ELF
 from pwnlib.util.misc import which
 from pwnlib.util.lists import concat
+from pwnlib.tubes.process import process
 from pwnscripts.string_checks import is_base_address
 from pwnscripts import config
 from pwnscripts.context import context
@@ -17,17 +19,6 @@ log = getLogger('pwnlib.exploit')
 # Helpfully taken from the one_gadget README.md
 def _one_gadget(filename):
     return list(map(int, check_output(['one_gadget', '--raw', filename]).split(b' ')))
-
-'''TODO
-"Run with this libc" function? (see: pwnlib.util.misc.parse_ldd_output)
-def TODO_libdir(id: str):
-    if this id doesn't exist:
-       assert that the lib doesn't match local-* (maybe add this as a libc property)
-       run libc_database.download(id) (assume subprocess will raise any important errors)
-    return db_dir + 'libs' + id
-
-def TODO_runwith():
-'''
 
 # BEGIN DEPRECATED
 def libc_find(db_dir: str, leaks: Dict[str,int]):
@@ -329,10 +320,11 @@ class libc(ELF):
         if binary is not None:
             id = self.db.id(binary)
         if id is not None:  # Assume the id is valid
+            self.local = id[:6] == 'local-'
             self.id = id
             self.libpath = path.join(self.db.db_dir, 'db', id)
             self.binary = self.libpath + '.so'
-            super().__init__(self.binary)   # Call ELF() on self.binary
+            super().__init__(self.binary, checksec=False)   # Call ELF() on self.binary
             self.__id_init__()
         else:
             raise ValueError('libc(...) requires binary="/path/to/libc.so.6"'+\
@@ -398,3 +390,33 @@ class libc(ELF):
             option = int(options('choose the gadget to use: ', list(map(hex,self.one_gadget))))
         assert 0 <= option < len(self.one_gadget)
         return self.one_gadget[option] + self.address
+
+    def dir(self) -> str:
+        '''Get the '/path/to/libc-database/libs/self.id' for this libc
+        Will raise ValueError if the libc is a locally imported libc
+        '''
+        # Why use a method instead of an __init__ defined property?
+        # Some users might not appreciate needing to ./download every library they use.
+        if self.local:
+            raise ValueError("'local-*' libc can never have a libs/ directory!")
+        lib_dir = path.join(self.db.db_dir, 'libs', self.id)
+        if not path.isdir(lib_dir):     # if lib_dir doesn't exist, but it's not local-*
+            log.info('libs/ for id=%r was not found; downloading now' % self.id)
+            self.db.download(self.id)   # download it
+        return lib_dir
+
+    def run_with(self, binary: ELF, argv=[], *a, **kw) -> process:
+        '''Run a `binary` with arguments `argv` using this libc's associated libs/ path.
+
+        Arguments:
+            `binary`: This is an ELF(). Please don't try to use a filename like with process().
+            `argv`: arguments to be passed 
+        '''
+        # First, find this libc's ld-linux.so with a glob*.
+        lib_dir = self.dir()
+        ld_linux_glob = glob(path.join(lib_dir, 'ld-linux*'))
+        assert len(ld_linux_glob) == 1   # This should never fail, but in case.
+        ld_linux = ld_linux_glob[0] # Guaranteed to exist as a file; barring race conds
+        # Next, run the process as ./ld-linux.so --library-path lib_dir binary [ARGS] ...
+        log.info('[libc] Running %r with libs in %r!' % (binary.path, lib_dir))
+        return process([ld_linux, '--library-path', lib_dir, binary.path]+argv, *a, **kw)

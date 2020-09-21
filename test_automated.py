@@ -8,6 +8,7 @@ showing off common use-cases and best practices.
 import unittest as ut
 # Unfortunately, pytest interprets every `test.*` function as a testable function, so no import * here
 from pwnscripts import system, context, log, fsb, extract_first_hex, fmtstr_payload, is_wsl, extract_all_hex, pack, path, CalledProcessError, libc
+import os, glob
 
 class BinTests(ut.TestCase):
     def test_A_common_sense(self):
@@ -41,6 +42,7 @@ class BinTests(ut.TestCase):
         lib.calc_base('scanf', 0x7fffa3b8b040)      # Test this func
         assert lib.address == 0x7fffa3b10000		# Make sure address was set
         assert lib.symbols['str_bin_sh'] == lib.address + orig_binsh	# ELF inherited property
+        context.clear() # Ensure that libc does not affect future tests
  
     def test_C_printf_buffer_bruteforce(self):
         '''A simple example of fsb.find_offset.
@@ -117,5 +119,23 @@ class BinTests(ut.TestCase):
         finally:
             system('rm 3.out')
     # TODO: tests for ROP
+    def test_E_libc(self):
+        '''Simple test to check that local-* libcs will crash for self.dir()
+
+        It's important that we *don't* run `context.libc = 'examples/libc.so.6' for this test.
+        Although it'll work fine on GitHub Actions, an actual user (like you) may have
+        a fully ./get'd libc-database, and 'examples/libc.so.6' will be identified as a non-local
+        lib if the binary filepath is passed to context.libc.
+        '''
+        print()
+        LOCAL_ID = 'local-18292bd12d37bfaf58e8dded9db7f1f5da1192cb'
+        context.libc_database = 'libc-database'
+        if not path.isfile(path.join(context.libc_database.db_dir, 'db', LOCAL_ID+'.so')):
+            context.libc_database.add('examples/libc.so.6')
+        context.libc = LOCAL_ID
+        self.assertRaises(ValueError, context.libc.dir)
+
+        for f in glob.glob(context.libc.libpath+'*'):   # not that smart
+            os.remove(f)
 if __name__ == '__main__':
     ut.main()

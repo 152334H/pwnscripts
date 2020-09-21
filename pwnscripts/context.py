@@ -3,9 +3,13 @@ some additional context attributes.'''
 from os import path
 from pwnlib import context
 from pwnlib.log import getLogger
+from pwnlib.elf.elf import ELF
 # IMPORTANT: pwnscripts must not be a relative import to prevent circular importing
 import pwnscripts
 log = getLogger('pwnlib.exploit')
+
+_pwntools_context = context.context
+_pwnscripts_LOCALS = ['libc_database', 'libc', 'binary', 'clear']
 
 class ContextType(context.ContextType):
 	'''This is the extended class that inherits from
@@ -18,7 +22,31 @@ class ContextType(context.ContextType):
 	'''
 	# Waiting for python3.9's dict unions here...
 	defaults = {**context.ContextType.defaults,
-				**{'libc_database': None, 'libc': None}}
+				**{'libc_database': None, 'libc': None, 'binary': None}}
+	
+	def clear(self, *a, **kw):
+		'''overwritten pwnscripts method: clear pwnscripts context as well
+		'''
+		self._tls._current.clear()
+		super().clear(*a, **kw)
+	@context._validator
+	def binary(self, binary):
+		'''overwritten pwnscripts method: spawn context.binary with pwnscript's ELF()
+		'''
+		# Some parts of pwnlib make use of context.binary, so we need to write to _pwntools_context
+		# This breaks the original design of ContextType, but no better solution has been concieved
+		_pwntools_context.binary = binary
+		if not isinstance(binary, ELF):	# This is pwnlib's ELF
+			import pwnscripts.elf
+			binary = pwnscripts.elf.ELF(binary)
+		return binary
+		''' Future idea feature:
+		context.libc = # Some really obscure libc version
+		# Setting the context should automagically make process() spawn with the correct ld-linux
+		r = context.binary.process()
+		# Is this impossible? Maybe.
+		'''
+
 	@context._validator
 	def libc_database(self, db_dir: str):
 		'''
@@ -55,9 +83,7 @@ class ContextType(context.ContextType):
 		log.info("libc=`%r' is not a file; assuming a libc-database id was given!" % assigned)
 		return pwnscripts.libc(id=assigned)
 
-_pwntools_context = context.context
 _pwnscripts_context = ContextType()
-_pwnscripts_LOCALS = ['libc_database', 'libc']
 class ContextWrapper(ContextType):
 	'''Wrapper over pwnlib.context.context so that modifications to
 	pwnscripts.context.context will propagate correctly to the rest of pwnlib

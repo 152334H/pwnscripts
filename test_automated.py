@@ -122,8 +122,10 @@ class BinTests(ut.TestCase):
         '''Simple test to check that local-* libcs will crash for self.dir()
         '''
         print()
+        LOCAL_ID = 'local-18292bd12d37bfaf58e8dded9db7f1f5da1192cb'
         context.libc_database = 'libc-database'
-        context.libc_database.add('examples/libc.so.6')
+        if not path.isfile(path.join(context.libc_database.db_dir, 'db', LOCAL_ID+'.so')):
+            context.libc_database.add('examples/libc.so.6')
         context.libc = 'local-18292bd12d37bfaf58e8dded9db7f1f5da1192cb'
         self.assertRaises(ValueError, context.libc.dir)
 

@@ -40,4 +40,4 @@ jobs:
       run: |
         chmod +x examples/*.c # Might be rw-
         export TERM=linux export TERMINFO=/etc/terminfo
-        pytest || pytest    # Bad idea
+        pytest || pytest || pytest    # Bad idea

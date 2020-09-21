@@ -10,6 +10,7 @@ from pwnlib.log import getLogger
 from pwnlib.elf.elf import ELF
 from pwnlib.util.misc import which
 from pwnlib.util.lists import concat
+from pwnlib.tubes.process import process
 from pwnscripts.string_checks import is_base_address
 from pwnscripts import config
 from pwnscripts.context import context
@@ -17,17 +18,6 @@ log = getLogger('pwnlib.exploit')
 # Helpfully taken from the one_gadget README.md
 def _one_gadget(filename):
     return list(map(int, check_output(['one_gadget', '--raw', filename]).split(b' ')))
-
-'''TODO
-"Run with this libc" function? (see: pwnlib.util.misc.parse_ldd_output)
-
-def run_with_libc():
-    from os import chdir, getcwd
-    prev = getcwd()
-    chdir(path.join(context.libc_database.db_dir, 'libs', context.libc.id))
-    return veccshell(context.binary.path, env={'LD_LIBRARY_PATH': "libc.so.6 ld-linux-x86-64.so.2"})
-    chdir(prev)
-'''
 
 # BEGIN DEPRECATED
 def libc_find(db_dir: str, leaks: Dict[str,int]):
@@ -333,7 +323,7 @@ class libc(ELF):
             self.id = id
             self.libpath = path.join(self.db.db_dir, 'db', id)
             self.binary = self.libpath + '.so'
-            super().__init__(self.binary)   # Call ELF() on self.binary
+            super().__init__(self.binary, checksec=False)   # Call ELF() on self.binary
             self.__id_init__()
         else:
             raise ValueError('libc(...) requires binary="/path/to/libc.so.6"'+\
@@ -413,3 +403,10 @@ class libc(ELF):
             log.info('libs/ for id=%r was not found; downloading now' % self.id)
             self.db.download(self.id)   # download it
         return lib_dir
+
+    def run_with(self, binary: ELF):
+        lib_dir = self.dir()
+        ld_linux = next(s for s in binary.ldd_libs() if s[:8] == 'ld-linux')
+        ld_linux = path.join(lib_dir, ld_linux)
+        assert path.isfile(ld_linux)
+        return process([ld_linux, '--library-path', lib_dir, binary.path])

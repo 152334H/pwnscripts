@@ -67,5 +67,32 @@ class BinTests(ut.TestCase):
         finally:
             system('rm 2.out')
     # TODO: tests for ROP
+    def test_C(self):
+        ''' Run a process() with a specific libc version using libc.run_with()
+        '''
+        print()
+        try:
+            system('./examples/fastbin_dup.c')
+            context.binary = 'f.out'
+            path_to_libcdb = 'libc-database'
+            if not path.isdir(path_to_libcdb):
+                path_to_libcdb = input("path to libc-database: ").strip()
+            assert path.isdir(path_to_libcdb)
+            context.libc_database = path_to_libcdb
+
+            # This version should cause a double free Abort
+            context.libc = 'libc6_2.31-0ubuntu9_amd64'
+            r = context.libc.run_with(context.binary)
+            r.recvall()
+            self.assertEqual(r.poll(), -6)
+
+            # This version should permit double frees
+            context.libc = 'libc6_2.24-11+deb9u4_amd64'
+            r = context.libc.run_with(context.binary)
+            r.recvall()
+            self.assertEqual(r.poll(), 0)
+
+        finally:
+            system('rm f.out')
 if __name__ == '__main__':
     ut.main()

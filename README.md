@@ -86,7 +86,7 @@ More features exist, but this is already too long.
 pwnscripts provides the `fsb` module, which can be split further into:
   * `.find_offset`: helper functions to bruteforce wanted printf offsets.
 
-    If you've ever found yourself spamming `%n$llx` into a terminal: this module will automate away all that. Take a look at the [example code](user_tests_and_examples.py) to see how.
+    If you've ever found yourself spamming `%n$llx` into a terminal: this module will automate away all that. Take a look at the [example code](test_automated.py) to see how.
 
     This already partially exists as a feature in pwntools (see `pwnlib.fmtstr.FmtStr`), but pwnscripts expands functionality by having bruteforcers for other important printf offsets, including
     1. `canary`s, for defeating stack protectors,
@@ -129,7 +129,7 @@ Pwnscripts also comes with a few minor extensions and functions:
 Proper examples for `pwnscripts` are available in `examples/` and `user_tests_and_examples.py`.
 ## I tried using it; it doesn't work!
 
-File in an [issue](https://github.com/152334H/pwnscripts/issues), if you can. With a single-digit userbase , it's hard to guess what might go wrong, but potentially:
+File in an [issue](https://github.com/152334H/pwnscripts/issues), if you can. With a single-digit userbase, it's hard to guess what might go wrong, but potentially:
  * pwnscripts is broken
  * Python is outdated (try python3.8+)
  * libc-database is not properly installed/initalised (did you run ./get?)
@@ -140,6 +140,12 @@ File in an [issue](https://github.com/152334H/pwnscripts/issues), if you can. Wi
  * Other unknown reasons. Try making a pull-request if you're interested.
 
 ## Updates
+
+Upcoming:
+ * `context.libc.run_with()` to run an ELF with a specific libc version.
+ * `context.libc.dir()` to get the `/path/to/libc-database/libs/libc.id/`
+ * `ELF` now has an `.ldd_libs()` method to get a list of libs used by a binary.
+ * `rop.system_call()` can now search for `'syscall; ret'` instructions.
 
 **v0.2.1** - Hotfix: `libc.select_gadget()` will return with the correct `libc.address` adjusted value
 

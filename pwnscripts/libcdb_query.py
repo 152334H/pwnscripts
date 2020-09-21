@@ -2,6 +2,7 @@
 See examples/, or try starting with libc_db().
 '''
 from re import search
+from glob import glob
 from typing import Dict
 from os import path, system
 from subprocess import check_output, CalledProcessError
@@ -404,9 +405,18 @@ class libc(ELF):
             self.db.download(self.id)   # download it
         return lib_dir
 
-    def run_with(self, binary: ELF):
+    def run_with(self, binary: ELF, argv=[], *a, **kw):
+        '''Run a `binary` with arguments `argv` using this libc's associated libs/ path.
+
+        Arguments:
+            `binary`: This is an ELF(). Please don't try to use a filename like with process().
+            `argv`: arguments to be passed 
+        '''
+        # First, find this libc's ld-linux.so with a glob*.
         lib_dir = self.dir()
-        ld_linux = next(s for s in binary.ldd_libs() if s[:8] == 'ld-linux')
-        ld_linux = path.join(lib_dir, ld_linux)
-        assert path.isfile(ld_linux)
-        return process([ld_linux, '--library-path', lib_dir, binary.path])
+        ld_linux_glob = glob(path.join(lib_dir, 'ld-linux*'))
+        assert len(ld_linux_glob) == 1   # This should never fail, but in case.
+        ld_linux = ld_linux_glob[0] # Guaranteed to exist as a file; barring race conds
+        # Next, run the process as ./ld-linux.so --library-path lib_dir binary [ARGS] ...
+        log.info('[libc] Running %r with libs in %r!' % (binary.path, lib_dir))
+        return process([ld_linux, '--library-path', lib_dir, binary.path]+argv, *a, **kw)

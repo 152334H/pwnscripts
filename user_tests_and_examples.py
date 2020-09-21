@@ -82,13 +82,13 @@ class BinTests(ut.TestCase):
 
             # This version should cause a double free Abort
             context.libc = 'libc6_2.31-0ubuntu9_amd64'
-            r = context.libc.run_with(context.binary)
+            r = context.binary.process()    # Auto run-with-libc
             r.recvall()
             self.assertEqual(r.poll(), -6)
 
             # This version should permit double frees
             context.libc = 'libc6_2.24-11+deb9u4_amd64'
-            r = context.libc.run_with(context.binary)
+            r = context.binary.process()    # Auto run-with-libc
             r.recvall()
             self.assertEqual(r.poll(), 0)
 

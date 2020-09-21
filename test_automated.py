@@ -42,6 +42,7 @@ class BinTests(ut.TestCase):
         lib.calc_base('scanf', 0x7fffa3b8b040)      # Test this func
         assert lib.address == 0x7fffa3b10000		# Make sure address was set
         assert lib.symbols['str_bin_sh'] == lib.address + orig_binsh	# ELF inherited property
+        context.clear() # Ensure that libc does not affect future tests
  
     def test_C_printf_buffer_bruteforce(self):
         '''A simple example of fsb.find_offset.

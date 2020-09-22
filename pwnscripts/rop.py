@@ -13,7 +13,7 @@ class ROP(rop.rop.ROP):
     class _Pop():
         '''Internal constructor for implementing ROP.pop
         This class is a wrapper, and should not be called outside of ROP().__init__().
-        Documentation here is to show examples for ROP.pop (see `pydoc pwnscripts.ROP.Pop`)
+        Documentation here is to show examples for ROP.pop (see `pydoc pwnscripts.ROP._Pop`)
         '''
         def __init__(self, rop):
             self.rop = rop

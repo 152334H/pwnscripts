@@ -71,15 +71,16 @@ ADDRESS_REGEX = {
     'base': defaultdict(lambda: '.*000$')
 }
 
+def is_stack_address(addr: int) -> bool:
+    regex = ADDRESS_REGEX['stack'][context.arch]
+    return addr > 0 and search(regex, hex(addr))
+
+def is_base_address(addr: int) -> bool:
+    '''Heuristic for _potential_ base addresses'''
+    regex = '.*000$'    # generic, TODO to check reasonable-ness
+    return addr > 0 and search(regex, hex(addr))
+
 def is_libc_address(addr: int) -> bool:
     '''Heuristic for _potential_ libc addresses'''
     regex = ADDRESS_REGEX['libc'][context.arch]
     return addr > 0 and search(regex, hex(addr)) and not is_stack_address(addr)
-
-def __getattr__(attr):
-    if search('is_[a-zA-Z]+_address', attr):
-        regex = ADDRESS_REGEX[attr[3:-8]][context.arch]
-        return lambda addr: addr > 0 and search(regex, hex(addr))
-    return attr
-
-__all__ = ['extract_first_bytes', 'extract_all_bytes', 'extract_first_hex', 'extract_all_hex', 'is_wsl']

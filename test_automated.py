@@ -7,7 +7,7 @@ showing off common use-cases and best practices.
 #TODO: Figure out why some tests have a small chance of failure.
 import unittest as ut
 # Unfortunately, pytest interprets every `test.*` function as a testable function, so no import * here
-from pwnscripts import system, context, log, fsb, extract_first_hex, fmtstr_payload, is_wsl, extract_all_hex, pack, path, CalledProcessError, libc
+from pwnscripts import system, context, log, fsb, extract_first_hex, fmtstr_payload, is_wsl, extract_all_hex, pack, path, CalledProcessError, libc, ELF, ROP
 import os, glob
 
 class BinTests(ut.TestCase):
@@ -137,5 +137,26 @@ class BinTests(ut.TestCase):
 
         for f in glob.glob(context.libc.libpath+'*'):   # not that smart
             os.remove(f)
+    
+    def test_F_ROP(self):
+        '''Tests for the various ROP extensions added'''
+        context.arch = 'amd64'
+        context.binary = ELF.from_assembly('syscall; ret; pop rax; pop rdi; pop rsi; pop rdx; ret; pop rcx; ret; pop rbx; ret;')
+        r = ROP(context.binary)
+        r.pop.rcx(2)
+        r.pop({'rbx': 2})
+        r.system_call('execve', ['/bin/sh', 0, 0])
+        self.assertEqual(r.dump(),
+        "0x0000:       0x10000008 pop rcx; ret\n"
+        "0x0008:              0x2\n"
+        "0x0010:       0x1000000a pop rbx; ret\n"
+        "0x0018:              0x2\n"
+        "0x0020:       0x10000003 pop rax; pop rdi; pop rsi; pop rdx; ret\n"
+        "0x0028:             0x3b [arg0] rax = SYS_execve\n"
+        "0x0030:             0x50 [arg1] rdi = AppendedArgument(['/bin/sh'], 0x0)\n"
+        "0x0038:              0x0 [arg2] rsi = 0\n"
+        "0x0040:              0x0 [arg3] rdx = 0\n"
+        "0x0048:       0x10000000 SYS_execve\n"
+        "0x0050:   b'/bin/sh\\x00'")
 if __name__ == '__main__':
     ut.main()

@@ -1,19 +1,23 @@
 '''Misc. functions that pwntools may/maynot already have
 '''
 #TODO: This module requires cleanup. It currently serves a dual purpose as a generic "util" module, which is not desirable.
+#TODO: This module _really_ requires cleanup.
+'''Planned refactoring of this...
+0. Scan pwntools again to make sure that this doesn't exist
+1. give is_wsl() a different naming. It shouldn't sound related to is_X_address
+2. Make a `util` folder (maybe named diff from pwntools?). Have it contain `extract.py` and `is.py`
+   * note: naming of `is.py` not-there-yet since `is` is a keyword
+3. Shotgun patch all of the renamed methods throughout pwnscripts
+4. Maybe make a more potent method for is_X_address (not sure yet)
+'''
 from re import findall, search
+from collections import defaultdict
 from pwnlib.log import getLogger
 from pwnlib.util.misc import read
 from pwnlib.util.lists import group
 from pwnlib.util.packing import pack, unpack
 from pwnscripts.context import context
 log = getLogger('pwnlib.exploit')
-
-def offset_to_regex(addr: int) -> str:
-    return '.*' + hex(addr)[2:] + '$'
-
-def offset_match(addr: int, offset: int) -> bool:
-    return offset is None or bool(search(offset_to_regex(offset), hex(addr)))
 
 # NOTE: ideally, n should default to context.bytes, but a default value is not dynamic...
 def extract_first_bytes(s: bytes, n: int) -> int:
@@ -32,6 +36,12 @@ def extract_first_hex(s: bytes) -> int:
     try: return int(findall(b'0x[0-9a-f]+', s)[0], 16)
     except IndexError: return -1
 
+def offset_to_regex(addr: int) -> str:
+    return '.*' + hex(addr)[2:] + '$'
+
+def offset_match(addr: int, offset: int) -> bool:
+    return offset is None or bool(search(offset_to_regex(offset), hex(addr)))
+
 def is_wsl() -> bool: return b'Microsoft' in read('/proc/sys/kernel/osrelease') 
 # TODO: compress all of theses is_X_address into a... class or something
 def is_PIE_address(addr: int) -> bool:
@@ -43,20 +53,6 @@ def is_PIE_address(addr: int) -> bool:
         log.warn("The memory mappings for wsl1 are not always congruent"+\
                 " with that of normal linux. Some things may break.")
     regex = ADDRESS_REGEX['pie'][context.arch]
-    return addr > 0 and search(regex, hex(addr))
-
-def is_stack_address(addr: int) -> bool:
-    regex = ADDRESS_REGEX['stack'][context.arch]
-    return addr > 0 and search(regex, hex(addr))
-
-def is_libc_address(addr: int) -> bool:
-    '''Heuristic for _potential_ libc addresses'''
-    regex = ADDRESS_REGEX['libc'][context.arch]
-    return addr > 0 and search(regex, hex(addr)) and not is_stack_address(addr)
-
-def is_base_address(addr: int) -> bool:
-    '''Heuristic for _potential_ base addresses'''
-    regex = '.*000$'    # generic, TODO to check reasonable-ness
     return addr > 0 and search(regex, hex(addr))
 
 def is_address(addr: int) -> bool:
@@ -71,5 +67,19 @@ ADDRESS_REGEX = {
     'pie': {'amd64': '0x5[56][0-9a-f]{10}', 'i386': '0x5[56][0-9a-f]{10}'},
     'stack': {'amd64': '0x7ff.*', 'i386': '0xff.*'},
     'libc': {'amd64':'0x7f.*', 'i386': '0xf7.*'},
-    'canary': {'amd64': '.*00', 'i386': '.*00'}
+    'canary': defaultdict(lambda: '.*00'),
+    'base': defaultdict(lambda: '.*000$')
 }
+
+def is_libc_address(addr: int) -> bool:
+    '''Heuristic for _potential_ libc addresses'''
+    regex = ADDRESS_REGEX['libc'][context.arch]
+    return addr > 0 and search(regex, hex(addr)) and not is_stack_address(addr)
+
+def __getattr__(attr):
+    if search('is_[a-zA-Z]+_address', attr):
+        regex = ADDRESS_REGEX[attr[3:-8]][context.arch]
+        return lambda addr: addr > 0 and search(regex, hex(addr))
+    return attr
+
+__all__ = ['extract_first_bytes', 'extract_all_bytes', 'extract_first_hex', 'extract_all_hex', 'is_wsl']

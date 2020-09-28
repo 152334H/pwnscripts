@@ -141,7 +141,7 @@ Pwnscripts also comes with a few minor extensions and functions:
     0x0028:         0x401696 pop rdi; ret
     0x0030:             0x40 [arg1] rdi = AppendedArgument(['/bin/sh'], 0x0)
     0x0038:         0x4022b4 SYS_execve
-		0x0040:   b'/bin/sh\x00'
+    0x0040:   b'/bin/sh\x00'
     ```
  * other unlisted features in development
 

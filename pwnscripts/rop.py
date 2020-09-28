@@ -1,6 +1,6 @@
 '''An extension of pwnlib.rop.rop.ROP.'''
-from pkg_resources import parse_version
 from typing import Union, Tuple
+from pkg_resources import parse_version
 from pwnlib import rop, constants, __version__ as PWNLIB_VER
 from pwnlib.abi import ABI
 from pwnlib.rop.call import Call
@@ -53,18 +53,18 @@ class ROP(rop.rop.ROP):
             self.rop = rop
         def label(self, id: Union[int,str]) -> Tuple[int, str]:
             ''' Convert a syscall identifier to a tuple of (syscall_number, label)'''
-            if type(id) == int:
+            if isinstance(id, int):
                 # AFAIK there is no "unresolve" function for pwnlib.constants, so
                 # if `id` happens to be an int --- just label with hex number
                 label = 'SYS_'+hex(id)
-            elif type(id) == str:   # Convert id to int
+            elif isinstance(id, str):   # Convert id to int
                 if len(id) < 4 or id[:4] != 'SYS_': # Prepend 'SYS_' to id if not present
                     id = 'SYS_' + id
                 id = getattr(constants, label:=id)
             else:
                 raise TypeError('%s: id=%r is not int/str' % (self, id))
             return (id, label)
-        def __getattr__(self, syscall:str):
+        def __getattr__(self, syscall: str):
             ''' Allow for r.system_call.read(...) -> r.system_call('read', ...)
             >>> context.binary = './binary32'   #implicit arch reset here
             >>> r = ROP(context.binary)

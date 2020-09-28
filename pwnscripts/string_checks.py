@@ -1,15 +1,5 @@
 '''Misc. functions that pwntools may/maynot already have
 '''
-#TODO: This module requires cleanup. It currently serves a dual purpose as a generic "util" module, which is not desirable.
-#TODO: This module _really_ requires cleanup.
-'''Planned refactoring of this...
-0. Scan pwntools again to make sure that this doesn't exist
-1. give is_wsl() a different naming. It shouldn't sound related to is_X_address
-2. Make a `util` folder (maybe named diff from pwntools?). Have it contain `extract.py` and `is.py`
-   * note: naming of `is.py` not-there-yet since `is` is a keyword
-3. Shotgun patch all of the renamed methods throughout pwnscripts
-4. Maybe make a more potent method for is_X_address (not sure yet)
-'''
 from re import findall, search
 from collections import defaultdict
 from pwnlib.log import getLogger
@@ -19,8 +9,18 @@ from pwnlib.util.packing import pack, unpack
 from pwnscripts.context import context
 log = getLogger('pwnlib.exploit')
 
+#TODO: This module _really_ requires cleanup. It currently serves a dual purpose as a generic "util" module, which is not desirable.
+'''Planned refactoring of this...
+0. Scan pwntools again to make sure that this doesn't exist
+1. give is_wsl() a different naming. It shouldn't sound related to is_X_address
+2. Make a `util` folder (maybe named diff from pwntools?). Have it contain `extract.py` and `is.py`
+   * note: naming of `is.py` not-there-yet since `is` is a keyword
+3. Shotgun patch all of the renamed methods throughout pwnscripts
+4. Maybe make a more potent method for is_X_address (not sure yet)
+'''
 # NOTE: ideally, n should default to context.bytes, but a default value is not dynamic...
 def extract_first_bytes(s: bytes, n: int) -> int:
+    # Unpack the first `n` bytes of a bytestring
     return unpack(s[:n], n*8)
 
 def extract_all_bytes(s: bytes, n: int) -> list:
@@ -29,10 +29,14 @@ def extract_all_bytes(s: bytes, n: int) -> list:
     return map(lambda s: unpack(s,n*8), group(n, s, 'drop'))
 
 def extract_all_hex(s: bytes) -> list:
+    ''' Extract a list of hex numbers from a bytestring
+    e.g. b'jfawoa0x1234aokfw 0x123' -> [0x1234a, 0x123]
+    '''
     try: return list(map(lambda l: int(l,16), findall(b'0x[0-9a-f]+', s)))
     except IndexError: return []
 
 def extract_first_hex(s: bytes) -> int:
+    # Extract the first hex number found in a bytestring
     try: return int(findall(b'0x[0-9a-f]+', s)[0], 16)
     except IndexError: return -1
 
@@ -72,6 +76,7 @@ ADDRESS_REGEX = {
 }
 
 def is_stack_address(addr: int) -> bool:
+    '''Heuristic for _potential_ stack addresses'''
     regex = ADDRESS_REGEX['stack'][context.arch]
     return addr > 0 and search(regex, hex(addr))
 

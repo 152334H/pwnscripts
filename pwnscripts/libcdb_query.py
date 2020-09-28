@@ -13,7 +13,6 @@ from pwnlib.util.misc import which
 from pwnlib.util.lists import concat
 from pwnlib.tubes.process import process
 from pwnscripts.string_checks import is_base_address
-from pwnscripts import config
 from pwnscripts.context import context
 log = getLogger('pwnlib.exploit')
 # Helpfully taken from the one_gadget README.md
@@ -168,12 +167,26 @@ def _db(db_dir: str):
         return libc_database(db_dir)
     elif context.libc_database is not None: # If not None
         return context.libc_database
-    else:
-        raise IOError("No libc-database found!\n"
-        "Either provide db_dir='/path/to/libc-database', or "
-        "set context.libc_database = '/path/to/libc-database'.")
+    #else:
+    raise IOError("No libc-database found!\n"
+    "Either provide db_dir='/path/to/libc-database', or "
+    "set context.libc_database = '/path/to/libc-database'.")
 
-# TODO: allow db_dir=None by querying from https://libc.rip API.
+'''TODO: allow db_dir=None by querying from https://libc.rip API.
+So, a few things to note about this.
+1. How to initialise? Assignment seems frivolous.
+    Perhaps it can be the default from startup? Unsure of what side-effects that may incur.
+2. Error catching for everything the API *doesn't* have. Two issues here:
+   a. There is a signifiant amount of code right now that just relies on `if context.libc_database is not None`.
+    That makes a separate "context.libc_api" property harder to enact.
+   b. If we instead try and follow the original db_dir=None plan, what about every function that the API lacks?
+    Do we just have a __getattr__ hook to die on any failure?
+   Got 2 ideas:
+   a. have a separate libc_api() object that reimplements everything. Refactor everything to know about API vs. database.
+    Although we can inherit from libc_database here, there's still a significant increase in maintenence cost.
+   b. keep the API low maintenence, and just raise NotImplementedError if there's even a small possibility of incompatabilities.
+    This will allow for minimal libc().calc_base() and libc_database().identify() usage, but not much else.
+'''
 class libc_database():
     '''An object to represent an existing libc-database stored locally.
     All libc-database functions are available as object methods.
@@ -312,7 +325,7 @@ class libc(ELF):
         # init a local libc-database
         if db is None:
             self.db = _db(db_dir)
-        elif type(db) == libc_database:
+        elif isinstance(db, libc_database):
             self.db = db
         else:
             raise ValueError("`db`="+repr(db)+"does not seem to be an instance of libc_database().")
@@ -334,7 +347,8 @@ class libc(ELF):
         # load up all library symbols; adds things like str_bin_sh uncaught by ELF()
         with open(self.libpath+'.symbols') as f:    # Weird thing: this breaks if 'rb' is used.
             symbols = dict(l.split() for l in f.readlines())
-        for k in symbols: self.symbols[k] = int(symbols[k], 16)
+        for k in symbols:
+            self.symbols[k] = int(symbols[k], 16)
         
         # load up one_gadget offsets in advance
         if which('one_gadget') is None:

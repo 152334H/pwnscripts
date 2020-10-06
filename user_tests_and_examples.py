@@ -48,7 +48,7 @@ class BinTests(ut.TestCase):
             r.sendline(payload)
             
             # grab the leaked addresses and pass them to libc_find() for detection
-            libc_addrs = map(lambda b:extract_first_bytes(b,6),fsb.leak.deref_extractor(r.recvall()))
+            libc_addrs = map(lambda b:unpack_bytes(b,6),fsb.leak.deref_extractor(r.recvall()))
             libc_dict = dict(zip(GOT_table, libc_addrs))
             path_to_libcdb = 'libc-database'
             if not path.isdir(path_to_libcdb):

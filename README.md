@@ -160,6 +160,14 @@ File in an [issue](https://github.com/152334H/pwnscripts/issues), if you can. Wi
 
 ## Updates
 
+**v0.5.0** - Breaking Behavior
+*Changes*
+ * `string_checks` has been refactored:
+   * `string_checks` itself is now named `util`
+   * `is_X_address` functions have been renamed to `is_addr.X`
+   * `extract_*` functions have been renamed to `unpack_*`
+ * a
+
 **v0.4.0** - ROP Update
 
 *New*

@@ -60,7 +60,7 @@ class AddrChecker():
 
     def _generic(_, addr: int, regex_type: str):
         ADDRESS_REGEX = {
-            'PIE': {'amd64': '0x5[56][0-9a-f]{10}', 'i386': '0x5[56][0-9a-f]{10}'},
+            'PIE': {'amd64': '0x5[56][0-9a-f]{10}', 'i386': '0x5[56][0-9a-f]{6}'},
             'stack': {'amd64': '0x7ff.*', 'i386': '0xff.*'},
             'libc': {'amd64':'0x7f.*', 'i386': '0xf7.*'},
             'canary': defaultdict(lambda: '.*00'),

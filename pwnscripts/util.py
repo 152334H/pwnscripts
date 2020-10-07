@@ -54,9 +54,9 @@ def is_wsl() -> bool: return b'Microsoft' in read('/proc/sys/kernel/osrelease')
 # TODO: compress all of theses is_X_address into a... class or something
 class AddrChecker():
     ''''''
-    def __callable__(self, addr: int) -> bool:
+    def __call__(self, addr: int) -> bool:
         '''Check if `addr` looks like _any_ reasonable paged address.'''
-        return any(f(addr) for f in [self.is_addr.stack, self.is_addr.libc, self.is_addr.PIE])
+        return any(f(addr) for f in [self.stack, self.libc, self.PIE])
 
     def _generic(_, addr: int, regex_type: str):
         ADDRESS_REGEX = {

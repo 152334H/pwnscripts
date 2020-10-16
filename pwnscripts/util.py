@@ -9,16 +9,6 @@ from pwnlib.util.packing import pack, unpack, unpack_many
 from pwnscripts.context import context
 log = getLogger('pwnlib.exploit')
 
-#TODO: This module _really_ requires cleanup. It currently serves a dual purpose as a generic "util" module, which is not desirable.
-'''Planned refactoring of this...
-0. Scan pwntools again to make sure that this doesn't exist
-1. give is_wsl() a different naming. It shouldn't sound related to is_X_address
-2. Make a `util` folder (maybe named diff from pwntools?). Have it contain `extract.py` and `is.py`
-   * note: naming of `is.py` not-there-yet since `is` is a keyword
-3. Shotgun patch all of the renamed methods throughout pwnscripts
-4. Maybe make a more potent method for is_X_address (not sure yet)
-'''
-# NOTE: ideally, n should default to context.bytes, but a default value is not dynamic...
 def unpack_bytes(s: bytes, n: int=None) -> int:
     '''Unpack the first `n` bytes of a bytestring,
     defaulting to n=context.bytes'''
@@ -51,9 +41,12 @@ def offset_match(addr: int, offset: int) -> bool:
     return offset is None or bool(search(offset_to_regex(offset), hex(addr)))
 
 def is_wsl() -> bool: return b'Microsoft' in read('/proc/sys/kernel/osrelease') 
-# TODO: compress all of theses is_X_address into a... class or something
+
 class AddrChecker():
-    ''''''
+    '''Internal class for guessing address 'types'
+    Similar to ContextType, this class should not be instantiated outside of this module;
+    only the existing instance of it (`util.is_addr`) should be used.
+    '''
     def __call__(self, addr: int) -> bool:
         '''Check if `addr` looks like _any_ reasonable paged address.'''
         return any(f(addr) for f in [self.stack, self.libc, self.PIE])

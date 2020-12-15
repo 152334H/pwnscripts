@@ -241,7 +241,7 @@ class libc(ELF):
                 e.g. 0x7f1234567890
         Returns: the ASLR base address of libc (for the active session)
         '''
-        
+        self.address = 0    # reset self.address if it is currently set
         self.address = addr - self.symbols[symbol]
         assert is_addr.base(self.address)   # check that base addr is reasonable
         return self.address
@@ -305,6 +305,8 @@ class libc(ELF):
         Arguments:
             `binary`: This is an ELF(). Please don't try to use a filename like with process().
             `argv`: arguments to be passed 
+        
+        Internally, this relies on executing ./ld-linux.so from the libc-database.
         '''
         # First, find this libc's ld-linux.so with a glob*.
         lib_dir = self.dir()
@@ -314,3 +316,4 @@ class libc(ELF):
         # Next, run the process as ./ld-linux.so --library-path lib_dir binary [ARGS] ...
         log.info('[libc] Running %r with libs in %r!' % (binary.path, lib_dir))
         return process([ld_linux, '--library-path', lib_dir, binary.path]+argv, *a, **kw)
+

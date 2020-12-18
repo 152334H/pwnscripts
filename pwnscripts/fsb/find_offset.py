@@ -36,7 +36,7 @@ from pwnlib.util.cyclic import cyclic, cyclic_find
 from pwnlib.util.packing import p32
 from pwnscripts import config
 from pwnscripts.context import context
-from pwnscripts.string_checks import extract_first_hex, is_canary, offset_match, is_libc_address, is_PIE_address
+from pwnscripts.util import is_addr, unpack_hex, offset_match
 log = getLogger('pwnlib.exploit')
 def _sendprintf(requirement: Callable[[int,Optional[str]],bool]=None, has_regex: bool=False):
     if requirement is None: return partial(_sendprintf, has_regex=has_regex)    # ???
@@ -47,7 +47,7 @@ def _sendprintf(requirement: Callable[[int,Optional[str]],bool]=None, has_regex:
         # Actual code
         for i in range(config.PRINTF_MIN, config.PRINTF_MAX):   # an unaligned printf will fail here
             payload = 'A'*8 + '%{}$p\n'.format(i)
-            extract = extract_first_hex(sendprintf(payload))    # expect @context.quiet here
+            extract = unpack_hex(sendprintf(payload))    # expect @context.quiet here
             log.debug('pwnscripts: extracted ' + hex(extract))
             if extract == -1: continue
             if _requirement(extract, offset):
@@ -92,7 +92,7 @@ def buffer(sendprintf: Callable[[bytes],bytes], maxlen=20) -> int:
         '''
         for offset in range(config.PRINTF_MIN+guess_n-1, config.PRINTF_MAX+guess_n-1, guess_n):
             payload = cyclic(guess_n*context.bytes) + "0x%{}$x\n".format(offset).encode()
-            extract = extract_first_hex(sendprintf(payload))    # Error will be -1
+            extract = unpack_hex(sendprintf(payload))    # Error will be -1
             if extract != -1 and 0 <= (found := cyclic_find(p32(extract))) < len(payload):
                 assert found%context.bytes == 0 # if not, the offset is non-aligned
                 log.info('%s for buffer: %d' % (__name__, offset-found//context.bytes))
@@ -109,7 +109,7 @@ def canary(resp) -> int:
         AND NOT looks_like_address()
     will be assumed a canary.
     '''
-    return is_canary(resp)
+    return is_addr.canary(resp)
 
 @_sendprintf
 def stack(resp) -> int:
@@ -128,7 +128,7 @@ def libc(resp: int, offset: int=None) -> int:
     for libc addresses, plus the `offset` given.
     An offset of `None` will simply pattern-match for any generic libc-ish address
     '''
-    return is_libc_address(resp) and offset_match(resp, offset)
+    return is_addr.libc(resp) and offset_match(resp, offset)
 
 @_sendprintf(has_regex=True)
 def code(resp: int, offset: int=None) -> int:
@@ -153,4 +153,4 @@ def PIE(resp: int, offset: int=None) -> int:
     
     An `offset` can be provided to further narrow down the search to
     code addresses matching the offset given.'''
-    return is_PIE_address(resp) and offset_match(resp, offset)
+    return is_addr.PIE(resp) and offset_match(resp, offset)

@@ -141,7 +141,7 @@ Pwnscripts also comes with a few minor extensions and functions:
     0x0028:         0x401696 pop rdi; ret
     0x0030:             0x40 [arg1] rdi = AppendedArgument(['/bin/sh'], 0x0)
     0x0038:         0x4022b4 SYS_execve
-		0x0040:   b'/bin/sh\x00'
+    0x0040:   b'/bin/sh\x00'
     ```
  * other unlisted features in development
 
@@ -159,6 +159,15 @@ File in an [issue](https://github.com/152334H/pwnscripts/issues), if you can. Wi
  * Other unknown reasons. Try making a pull-request if you're interested.
 
 ## Updates
+
+**v0.5.0** - Breaking Behavior
+*Changes*
+ * `string_checks` has been refactored:
+   * `string_checks` itself is now named `util`
+   * `is_X_address` functions have been renamed to `is_addr.X`
+   * `extract_*` functions have been renamed to `unpack_*`
+ * `libc_db()` from v0.1 is now fully removed from pwnscripts.
+ * bugfixes for fsb.leak module
 
 **v0.4.0** - ROP Update
 

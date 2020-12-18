@@ -166,7 +166,8 @@ File in an [issue](https://github.com/152334H/pwnscripts/issues), if you can. Wi
    * `string_checks` itself is now named `util`
    * `is_X_address` functions have been renamed to `is_addr.X`
    * `extract_*` functions have been renamed to `unpack_*`
- * a
+ * `libc_db()` from v0.1 is now fully removed from pwnscripts.
+ * bugfixes for fsb.leak module
 
 **v0.4.0** - ROP Update
 

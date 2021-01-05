@@ -315,5 +315,10 @@ class libc(ELF):
         ld_linux = ld_linux_glob[0] # Guaranteed to exist as a file; barring race conds
         # Next, run the process as ./ld-linux.so --library-path lib_dir binary [ARGS] ...
         log.info('[libc] Running %r with libs in %r!' % (binary.path, lib_dir))
+        # HACK
+        if 'class_override' in kw:
+            proc = kw['class_override']
+            kw = dict((k,v) for k,v in kw.items() if k != 'class_override')
+            return proc([ld_linux, '--library-path', lib_dir, binary.path]+argv, *a, **kw)
         return process([ld_linux, '--library-path', lib_dir, binary.path]+argv, *a, **kw)
 

@@ -8,6 +8,7 @@ To use any of the functions here, you should
 predefine a function that fsb.find_offset can
 interact with. If a binary has code like:
 
+    //usr/bin/gcc "$0" -o test.o; exit
     int main(){
         char s[200];
         fgets(s, 199, stdin);
@@ -17,6 +18,7 @@ interact with. If a binary has code like:
 fsb.find_offset needs a function that can
 abstract away the i/o of the binary:
 
+    @context.quiet
     def printf_io(send: str) -> bytes:
         r = remote(...)
         r.send(send)
@@ -25,8 +27,24 @@ abstract away the i/o of the binary:
 Then, we can use the io function to find, e.g.
 the offset of the stack canary:
 
+>>> context.binary = './test.o'
 >>> fsb.find_offset.canary(printf_io)
+[*] pwnscripts.fsb.find_offset for 'canary': 31
 31
+pwnscripts maintains a cache of printf values leaked, such that
+subsequent runs will only run printf_io() if necessary:
+>>> context.libc_database = '...'
+>>> context.libc = '/lib/x86_64-linux-gnu/libc.so.6'
+>>> context.log_level = 'debug'
+>>> fsb.find_offset.libc(printf_io, offset=context.libc.symbols['__libc_start_main_ret']&0xfff)
+[DEBUG] cache is at /home/throwaway/.cache/.pwntools-cache-3.8/fsb-cache/07e93d243fc1a7d88432cfb25bdc8bbb7b65fcabd6bb96ccea9c1ad027f2039f-default
+(cached) [DEBUG] pwnscripts: extracted 0x7c
+(cached) [DEBUG] pwnscripts: extracted 0x4141414141414141
+... (omitted) ...
+(cached) [DEBUG] pwnscripts: extracted 0xcd088451e013aa00
+[DEBUG] pwnscripts: extracted 0x0
+[DEBUG] pwnscripts: extracted 0x7f1e3d92d0b3
+[*] pwnscripts.fsb.find_offset for 'libc': 33
 '''
 from os import path, mkdir
 from re import findall
@@ -83,7 +101,9 @@ def _getprintf(sendprintf: Callable[[bytes],bytes], cache: str) -> Generator:
                     if context.log_level == 10: print('(cached) ', end='')
                 else: # This is the part where an EOFError might occur.
                     payload = 'A'*8 + '%{}$p\n'.format(i) # an unaligned printf will fail here
-                    cache_dict[i] = unpack_hex(sendprintf(payload))
+                    extract = sendprintf(payload)
+                    if b"(nil)" in extract: cache_dict[i] = 0
+                    else: cache_dict[i] = unpack_hex(extract)    # Error will be -1
                 if cache_dict[i] == -1:
                     log.info("pwnscripts: failed to extract printf data for offset %d." % i)
                     continue
@@ -151,7 +171,9 @@ def buffer(sendprintf: Callable[[bytes],bytes], maxlen=20) -> int:
         '''
         for offset in range(config.PRINTF_MIN+guess_n-1, config.PRINTF_MAX+guess_n-1, guess_n):
             payload = cyclic(guess_n*context.bytes) + "0x%{}$x\n".format(offset).encode()
-            extract = unpack_hex(sendprintf(payload))    # Error will be -1
+            extract = sendprintf(payload)
+            if b"(nil)" in extract: extract = 0
+            else: extract = unpack_hex(extract)    # Error will be -1
             if extract != -1 and 0 <= (found := cyclic_find(p32(extract))) < len(payload):
                 assert found%context.bytes == 0 # if not, the offset is non-aligned
                 log.info('%s for buffer: %d' % (__name__, offset-found//context.bytes))

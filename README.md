@@ -160,7 +160,19 @@ File in an [issue](https://github.com/152334H/pwnscripts/issues), if you can. Wi
 
 ## Updates
 
+##### v0.5.1dev - fsb.find_offset improvements
+###### TODO
+* Expand on the `fsb` part of this README
+* Add the option to pick the cache name in the new cache system
+* Make the default cache name magically detect remote vs. process && diff libc versions)
+* Find some way to do testing on the cache system
+
+###### Changes
+ * `fsb.find_offset.<>()` will store a **cache** of leaked printf values.
+ * `libc.run_with()` now has an argument for process constructor overridding.
+
 **v0.5.0** - Breaking Behavior
+
 *Changes*
  * `string_checks` has been refactored:
    * `string_checks` itself is now named `util`

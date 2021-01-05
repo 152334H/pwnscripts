@@ -28,8 +28,10 @@ the offset of the stack canary:
 >>> fsb.find_offset.canary(printf_io)
 31
 '''
+from os import path, mkdir
 from re import findall
-from typing import Callable, Optional
+from hashlib import sha256
+from typing import Callable, Optional, Dict, Generator
 from functools import wraps, partial
 from pwnlib.log import getLogger
 from pwnlib.util.cyclic import cyclic, cyclic_find
@@ -38,23 +40,79 @@ from pwnscripts import config
 from pwnscripts.context import context
 from pwnscripts.util import is_addr, unpack_hex, offset_match
 log = getLogger('pwnlib.exploit')
+
+def _get_cache_filename(cache: str, binary_cache={}) -> str:
+    '''ONLY FOR INTERNAL USE
+    return the filepath to the cache file for printf leaks (for the current context.binary).
+    A specific `cache` label can be used to differentiate between e.g. remote/local printf offsets.
+
+    Arguments:
+        cache: the specific cache to query from. Defaults to 'default'.
+        biinary_cache: DO NOT USE THIS ARGUMENT
+    Returns:
+        the full filepath to the aforementioned cache file, as a string.
+    Raises RuntimeERror if `context.binary` is not set.
+    '''
+    cachedir = path.join(context.cache_dir, 'fsb-cache')
+    if not path.exists(cachedir): mkdir(cachedir)
+
+    if context.binary is None: raise RuntimeError(
+        'pwnscripts.fsb.find_offset needs context.binary to be set for caching.'
+        'if no binary is available, run fsb.find_offset.<func>(..., cache=None)'
+    )
+    if context.binary.path not in binary_cache: # only do hashing once-per-run
+        sha = sha256()
+        sha.update(context.binary.get_data())
+        binary_cache[context.binary.path] = sha.hexdigest()
+    return path.join(cachedir, binary_cache[context.binary.path]+'-'+cache)
+
+def _getprintf(sendprintf: Callable[[bytes],bytes], cache: str) -> Generator:
+    '''ONLY FOR INTERNAL USE
+    Cached printf bruteforcing.
+    Returns: generator that returns (offset, leaked_value) pairs.'''
+    if not path.exists(cache_filename := _get_cache_filename(cache)):
+        with open(cache_filename, 'x') as f: pass   # make the file
+    log.info('cache is at %s' % cache_filename)
+    # cache_filename *must* be an existing readable file, with every line matching the regex /[0-9]+:[0-9]+/
+    with open(cache_filename, 'r') as f:
+        cache_dict = dict([map(int,l.split(':')) for l in f.read().split('\n')])
+    try: 
+        for i in range(config.PRINTF_MIN, config.PRINTF_MAX):
+            try: 
+                if i in cache_dict: print('(cached) ', end='')
+                else: # This is the part where an EOFError might occur.
+                    payload = 'A'*8 + '%{}$p\n'.format(i) # an unaligned printf will fail here
+                    cache_dict[i] = sendprintf(payload)
+                if cache_dict[i] == -1:
+                    log.info("pwnscripts: failed to extract printf data for offset %d." % i)
+                    continue
+                log.debug('pwnscripts: extracted %d' % cache_dict[i])
+                yield i,cache_dict[i]
+            except EOFError: # catch a failed printf call if you can.
+                log.warn("pwnscripts: fsb.find_offset caught EOFError for offset %d!" % i)
+    finally: # update the cachefile. We're expecting the caller to .close() this generator.
+        with open(cache_filename, 'w') as f:
+            f.write('\n'.join('%d:%d'%t for t in cache_dict.items()))
+
 def _sendprintf(requirement: Callable[[int,Optional[str]],bool]=None, has_regex: bool=False):
+    '''ONLY FOR INTERNAL USE
+    Generic printf bruteforcer for leaking values.
+    '''
     if requirement is None: return partial(_sendprintf, has_regex=has_regex)    # ???
     @wraps(requirement)
-    def inner(sendprintf: Callable[[bytes],bytes], offset: int=None) -> int:
+    def inner(sendprintf: Callable[[bytes],bytes], offset: int=None, cache: str='default') -> int:
         if has_regex is False: _requirement = lambda v,_: requirement(v)
         else: _requirement = requirement
         # Actual code
-        for i in range(config.PRINTF_MIN, config.PRINTF_MAX):   # an unaligned printf will fail here
-            payload = 'A'*8 + '%{}$p\n'.format(i)
-            extract = unpack_hex(sendprintf(payload))    # expect @context.quiet here
-            log.debug('pwnscripts: extracted ' + hex(extract))
-            if extract == -1: continue
+        leak_generator = _getprintf(sendprintf, cache)
+        for i,extract in leak_generator:
             if _requirement(extract, offset):
                 log.info('%s for %r: %d' % (__name__, requirement.__name__, i))
+                leak_generator.close() # Maybe we should have this run even on RuntimeError?
                 return i
         raise RuntimeError
     return inner
+
 #'''
 @_sendprintf
 def _buffer(resp) -> int:

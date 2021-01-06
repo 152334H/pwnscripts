@@ -7,7 +7,10 @@ showing off common use-cases and best practices.
 #TODO: Figure out why some tests have a small chance of failure.
 import unittest as ut
 # Unfortunately, pytest interprets every `test.*` function as a testable function, so no import * here
-from pwnscripts import system, context, log, fsb, unpack_hex, fmtstr_payload, is_wsl, unpack_many_hex, pack, path, CalledProcessError, libc, ELF, ROP
+from pwnscripts import context, log, fsb, unpack_hex, fmtstr_payload, is_wsl, unpack_many_hex, pack, libc, ELF, ROP
+from os import system, path
+from subprocess import CalledProcessError
+
 import os, glob
 
 class BinTests(ut.TestCase):

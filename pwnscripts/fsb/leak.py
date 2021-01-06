@@ -3,6 +3,7 @@
 from typing import List, Callable
 from pwnlib.util.packing import pack
 from pwnscripts.context import context
+__all__ = ['deref_payload', 'deref_extractor', 'dereference']
 
 def deref_payload(buffer_offset: int, addr: List[int]) -> bytes:
     '''Make a suboptimal printf payload for dereferencing the addresses

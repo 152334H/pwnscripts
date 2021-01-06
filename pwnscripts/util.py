@@ -7,6 +7,7 @@ from pwnlib.util.misc import read
 from pwnlib.util.packing import pack, unpack, unpack_many
 from pwnscripts.context import context
 log = getLogger('pwnlib.exploit')
+__all__ = ['is_addr', 'unpack_bytes', 'unpack_many_bytes', 'unpack_hex', 'unpack_many_hex', 'offset_to_regex', 'offset_match', 'is_wsl']
 
 def unpack_bytes(s: bytes, n: int=None) -> int:
     '''Unpack the first `n` bytes of a bytestring,

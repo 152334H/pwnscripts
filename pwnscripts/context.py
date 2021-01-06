@@ -7,7 +7,7 @@ from pwnlib.elf.elf import ELF
 # IMPORTANT: pwnscripts must not be a relative import to prevent circular importing
 import pwnscripts
 log = getLogger('pwnlib.exploit')
-
+__all__ = ['context', '_pwntools_context']
 _pwntools_context = context.context
 _pwnscripts_LOCALS = ['libc_database', 'libc', 'binary', 'clear']
 

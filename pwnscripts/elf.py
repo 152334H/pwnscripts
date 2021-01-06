@@ -3,6 +3,7 @@ from os import path
 from subprocess import check_output
 import pwnlib
 from pwnscripts.context import context
+__all__ = ['ELF']
 
 class ELF(pwnlib.elf.elf.ELF):
     def ldd_libs(self) -> list:

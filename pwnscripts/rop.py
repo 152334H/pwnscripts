@@ -7,6 +7,7 @@ from pwnlib.rop.call import Call
 from pwnlib.util.packing import flat
 from pwnlib.shellcraft import registers
 from pwnscripts.context import context
+__all__ = ["ROP"]
 
 class ROP(rop.rop.ROP):
     '''Extended pwnscripts ROP class

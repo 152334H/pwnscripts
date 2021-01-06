@@ -80,7 +80,7 @@ class AddrChecker():
         '''Heuristic for _potential_ base addresses'''
         return self._generic(addr, 'base')
 
-    def libc(self, addr: int) -> bool: # NOTE: will fail on wsl
+    def libc(self, addr: int) -> bool: # NOTE: this is broken on .run_with()
         '''Heuristic for _potential_ libc addresses'''
         return self._generic(addr, 'libc') and not self.stack(addr)
 

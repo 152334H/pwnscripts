@@ -230,24 +230,6 @@ class libc(ELF):
         else:
             self.one_gadget = _one_gadget(self.libpath+'.so')
 
-    def calc_base(self, symbol: str, addr: int) -> int:
-        '''Given the ASLR address of a libc function,
-        calculate (and return) the randomised base address.
-        This will also silently set self.address to be the base - 
-        further queries to self.symbols[] will be adjusted to match.
-        
-        Arguments:
-            `symbol`: the name of the function/symbol found in libc
-                e.g. read, __libc_start_main, fgets
-            `addr`: the actual ASLR address assigned to the libc symbol
-                for the current active session
-                e.g. 0x7f1234567890
-        Returns: the ASLR base address of libc (for the active session)
-        '''
-        super().calc_base(symbol, addr)
-        assert is_addr.libc(self.address) # extra check for libc
-        return self.address
-
     def select_gadget(self, option: int=None) -> int:
         '''An interactive function to choose a preferred
         one_gadget requirement mid-exploit.

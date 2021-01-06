@@ -1,13 +1,18 @@
 #### v0.5.1dev - fsb.find_offset improvements
 ##### TODO
-* Expand on the `fsb` part of this README
 * Add the option to pick the cache name in the new cache system
 * Make the default cache name magically detect remote vs. process && diff libc versions)
-* Find some way to do testing on the cache system
+* Find some way to do automated testing on the cache system
 
 ##### Changes
+###### New
  * `fsb.find_offset.<>()` will store a **cache** of leaked printf values.
+   * `README.md` has been updated appropriately.
  * `libc.run_with()` now has an argument for process constructor overridding.
+
+###### Internal changes
+ * `__all__` has been added to most source files to prevent namespace leaking.
+ * Version history has been shifted to its [own separate file](CHANGELOG.md)
 
 ### v0.5.0 - Breaking Behavior
 

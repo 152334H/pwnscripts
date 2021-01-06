@@ -8,12 +8,13 @@ from os import path, system
 from subprocess import check_output, CalledProcessError
 from pwnlib.ui import options
 from pwnlib.log import getLogger
-from pwnlib.elf.elf import ELF
 from pwnlib.util.misc import which
 from pwnlib.util.lists import concat
 from pwnlib.tubes.process import process
 from pwnscripts.util import is_addr
 from pwnscripts.context import context
+#from pwnlib.elf.elf import ELF
+from pwnscripts.elf import ELF
 log = getLogger('pwnlib.exploit')
 __all__ = ['libc_database', 'libc']
 
@@ -243,9 +244,8 @@ class libc(ELF):
                 e.g. 0x7f1234567890
         Returns: the ASLR base address of libc (for the active session)
         '''
-        self.address = 0    # reset self.address if it is currently set
-        self.address = addr - self.symbols[symbol]
-        assert is_addr.base(self.address)   # check that base addr is reasonable
+        super().calc_base(symbol, addr)
+        assert is_addr.libc(self.address) # extra check for libc
         return self.address
 
     def select_gadget(self, option: int=None) -> int:

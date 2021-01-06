@@ -7,7 +7,8 @@ from pwnlib.util.misc import read
 from pwnlib.util.packing import pack, unpack, unpack_many
 from pwnscripts.context import context
 log = getLogger('pwnlib.exploit')
-__all__ = ['is_addr', 'unpack_bytes', 'unpack_many_bytes', 'unpack_hex', 'unpack_many_hex', 'offset_to_regex', 'offset_match', 'is_wsl']
+__all__ = ['is_addr', 'unpack_bytes', 'unpack_many_bytes', 'unpack_hex', 'unpack_many_hex',
+           'offset_to_regex', 'offset_match', 'is_wsl']
 
 def unpack_bytes(s: bytes, n: int=None) -> int:
     '''Unpack the first `n` bytes of a bytestring,
@@ -34,10 +35,12 @@ def unpack_many_hex(s: bytes) -> list:
     try: return list(map(lambda l: int(l,16), findall(b'0x[0-9a-f]+', s)))
     except IndexError: return []
 
-def offset_to_regex(addr: int) -> str: # convert an int `addr` to a regex terminating with hex(addr)
+def offset_to_regex(addr: int) -> str:
+    # convert an int `addr` to a regex terminating with hex(addr)
     return '.*' + hex(addr)[2:] + '$'
 
-def offset_match(addr: int, offset: int) -> bool: # check if `addr` ends with `offset`
+def offset_match(addr: int, offset: int) -> bool:
+    # check if `addr` ends with `offset`
     return offset is None or bool(search(offset_to_regex(offset), hex(addr)))
 
 def is_wsl() -> bool: return b'Microsoft' in read('/proc/sys/kernel/osrelease') 

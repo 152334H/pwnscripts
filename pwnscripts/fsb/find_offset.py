@@ -37,7 +37,7 @@ subsequent runs will only run printf_io() if necessary:
 >>> context.libc = '/lib/x86_64-linux-gnu/libc.so.6'
 >>> context.log_level = 'debug'
 >>> fsb.find_offset.libc(printf_io, offset=context.libc.symbols['__libc_start_main_ret']&0xfff)
-[DEBUG] cache is at /home/throwaway/.cache/.pwntools-cache-3.8/fsb-cache/07e93d243fc1a7d88432cfb25bdc8bbb7b65fcabd6bb96ccea9c1ad027f2039f-default
+[DEBUG] cache is at ~/.cache/.pwntools-cache-3.8/fsb-cache/07e93d243fc1a7d88432cfb25bdc8bbb7b65fcabd6bb96ccea9c1ad027f2039f-default
 (cached) [DEBUG] pwnscripts: extracted 0x7c
 (cached) [DEBUG] pwnscripts: extracted 0x4141414141414141
 ... (omitted) ...
@@ -49,7 +49,7 @@ subsequent runs will only run printf_io() if necessary:
 from os import path, mkdir, unlink
 from re import findall
 from hashlib import sha256
-from typing import Callable, Optional, Dict, Generator
+from typing import Callable, Optional, Generator
 from functools import wraps, partial
 from pwnlib.log import getLogger
 from pwnlib.util.cyclic import cyclic, cyclic_find
@@ -106,12 +106,12 @@ def _getprintf(sendprintf: Callable[[bytes],bytes], cache: str) -> Generator:
     if not path.exists(cache_filename := _get_cache_filename(cache)):
         with open(cache_filename, 'x') as f: pass   # make the file
     log.debug('cache is at %s' % cache_filename)
-    # cache_filename *must* be an existing readable file, with every line matching the regex /[0-9]+:[0-9]+/
+    # cache_filename *must* be a readable file, with all lines matching the regex /[0-9]+:[0-9]+/
     with open(cache_filename, 'r') as f:
         cache_dict = dict([map(int,l.split(':')) for l in f.read().strip().split('\n') if l])
-    try: 
+    try:
         for i in range(config.PRINTF_MIN, config.PRINTF_MAX):
-            try: 
+            try:
                 if i in cache_dict: # NOTE: replace the proceeding line with something better
                     if context.log_level == 10: print('(cached) ', end='')
                 else: # This is the part where an EOFError might occur.
@@ -199,7 +199,7 @@ def buffer(sendprintf: Callable[[bytes],bytes], maxlen=20) -> int:
 @_sendprintf
 def canary(resp) -> int:
     '''heuristic-based bruteforcer to find the offset of a stack canary.
-    
+
     In particular, a word matching
         word[-1]=='\\0' AND word.count('\\0')==1
         AND NOT looks_like_address()
@@ -233,7 +233,7 @@ def code(resp: int, offset: int=None) -> int:
         '0x804.{4}' (on i386)
         '0x40.{4}'  (on amd64)
     will be considered a code address.
-    
+
     An `offset` can be provided to further narrow down the search to
     code addresses matching the offset given.'''
     return findall({'i386': '0x804....', 'amd64': '0x40....'}[context.arch], hex(resp)) != [] and\
@@ -246,7 +246,7 @@ def PIE(resp: int, offset: int=None) -> int:
         '0x56.*' (on i386)
         '0x55.*'  (on amd64)
     will be considered a code address.
-    
+
     An `offset` can be provided to further narrow down the search to
     code addresses matching the offset given.'''
     return is_addr.PIE(resp) and offset_match(resp, offset)

@@ -11,7 +11,6 @@ from pwnlib.log import getLogger
 from pwnlib.util.misc import which
 from pwnlib.util.lists import concat
 from pwnlib.tubes.process import process
-from pwnscripts.util import is_addr
 from pwnscripts.context import context
 #from pwnlib.elf.elf import ELF
 from pwnscripts.elf import ELF
@@ -63,7 +62,7 @@ So, a few things to note about this.
 class libc_database():
     '''An object to represent an existing libc-database stored locally.
     All libc-database functions are available as object methods.
-    
+
     >>> context.libc_database = 'libc-database'
     >>> print( context.libc_database.dump().decode() )
     offset___libc_start_main_ret = 0x21b97
@@ -89,7 +88,7 @@ class libc_database():
 
         Arguments:
             `leaks`: dict with key-pairs of symbol_name:addr
-        
+
         Returns:
             a `libc()` object with `address` set in accordance with the
             leaked addresses provided in `leaks`.
@@ -115,9 +114,9 @@ class libc_database():
         found = self.find(*args).strip().split(b'\n')
 
         if len(found) == 1: # if a single libc was isolated
-            # NOTE: assuming ./find output format is "<url> (<id>)". 
+            # NOTE: assuming ./find output format is "<url> (<id>)".
             # NOTE (continued): this behaviour has changed in the past!
-            libcid = found[0].split(b'(')[-1][:-1]  
+            libcid = found[0].split(b'(')[-1][:-1]
             log.info(b'found libc! id: ' + libcid)
             lib = libc(db=self, id=libcid.decode('utf-8'))
             # Also help to calculate self.base
@@ -183,7 +182,7 @@ class libc(ELF):
 
             `id`:
                 a libc-database identifier for the binary
-            
+
             `db_dir`:
                 a filepath to a libc-database.
 
@@ -191,7 +190,7 @@ class libc(ELF):
                 an existing libc_database() object.
                 This will take precedence over `db_dir`, if (for whatever reason)
                 both happen to be provided.
-        
+
         Returns:
             a libc() object.
         '''
@@ -202,7 +201,7 @@ class libc(ELF):
             self.db = db
         else:
             raise ValueError("`db`="+repr(db)+"does not seem to be an instance of libc_database().")
-        
+
         if binary is not None:
             id = self.db.id(binary)
         if id is not None:  # Assume the id is valid
@@ -215,14 +214,14 @@ class libc(ELF):
         else:
             raise ValueError('libc(...) requires binary="/path/to/libc.so.6"'+\
                              ' or identifer="<libc identifier>" as an argument')
-    
+
     def __id_init__(self):
         # load up all library symbols; adds things like str_bin_sh uncaught by ELF()
         with open(self.libpath+'.symbols') as f:    # Weird thing: this breaks if 'rb' is used.
             symbols = dict(l.split() for l in f.readlines())
         for k in symbols:
             self.symbols[k] = int(symbols[k], 16)
-        
+
         # load up one_gadget offsets in advance
         if which('one_gadget') is None:
             log.info('one_gadget does not appear to exist in PATH. ignoring.')
@@ -233,7 +232,7 @@ class libc(ELF):
     def select_gadget(self, option: int=None) -> int:
         '''An interactive function to choose a preferred
         one_gadget requirement mid-exploit.
-        
+
         Arguments:
             `option`: if given,
                 used to immediately select a one_gadget; interactive menu will be skipped
@@ -288,8 +287,8 @@ class libc(ELF):
 
         Arguments:
             `binary`: This is an ELF(). Please don't try to use a filename like with process().
-            `argv`: arguments to be passed 
-        
+            `argv`: arguments to be passed
+
         Internally, this relies on executing ./ld-linux.so from the libc-database.
         '''
         # First, find this libc's ld-linux.so with a glob*.
@@ -305,4 +304,3 @@ class libc(ELF):
             kw = dict((k,v) for k,v in kw.items() if k != 'class_override')
             return proc([ld_linux, '--library-path', lib_dir, binary.path]+argv, *a, **kw)
         return process([ld_linux, '--library-path', lib_dir, binary.path]+argv, *a, **kw)
-

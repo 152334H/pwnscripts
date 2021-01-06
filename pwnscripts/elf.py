@@ -10,9 +10,9 @@ class ELF(pwnlib.elf.elf.ELF):
     def calc_base(self, symbol: str, addr: int) -> int:
         '''Given the ASLR address of a symbol,
         calculate (and return) the randomised base address.
-        This will also silently set self.address to be the base - 
+        This will also silently set self.address to be the base -
         further queries to self.symbols[] will be adjusted to match.
-        
+
         Arguments:
             `symbol`: the name of the function/symbol found in ELF.symbols
                 e.g. read, __libc_start_main, fgets
@@ -25,7 +25,7 @@ class ELF(pwnlib.elf.elf.ELF):
         self.address = addr - self.symbols[symbol]
         assert is_addr.base(self.address)   # check that base addr is reasonable
         return self.address
-    
+
     def ldd_libs(self) -> list:
         '''ELF.libs fails on wsl. This function is here for that purpose.
         Returns: list of library basenames detected by ldd.
@@ -39,7 +39,7 @@ class ELF(pwnlib.elf.elf.ELF):
         If `context.libc` is set, process() will run
             context.libc.run_with(self, argv, *a, **kw)
         Otherwise, the original pwntools' ELF.process() is called.
-        
+
         Returns:
             pwnlib.tubes.process.process() object
         '''

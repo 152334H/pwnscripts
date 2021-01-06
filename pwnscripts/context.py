@@ -26,7 +26,7 @@ class ContextType(context.ContextType):
     # Waiting for python3.9's dict unions here...
     defaults = {**context.ContextType.defaults,
                 **{'libc_database': None, 'libc': None, 'binary': None}}
-    
+
     def clear(self, *a, **kw):
         '''overwritten pwnscripts method: clear pwnscripts context as well
         '''
@@ -51,7 +51,7 @@ class ContextType(context.ContextType):
         <pwnscripts.libcdb_query.libc_database object at 0x7fffffffffff>
         '''
         return pwnscripts.libc_database(db_dir)
-    
+
     @context._validator
     def libc(self, assigned: str):
         '''
@@ -65,7 +65,7 @@ class ContextType(context.ContextType):
         PIE:      PIE enabled
         >>> context.libc
         libc('/path/to/pwnscripts/libc-database/db/libc6_2.27-3ubuntu1_amd64.so')
-        or 
+        or
         >>> context.libc = 'libc6_2.27-3ubuntu1_amd64'
         [*] libc=`'libc6_2.27-3ubuntu1_amd64'' is not a file; assuming a libc-database id was given!
         >>> context.libc
@@ -83,7 +83,7 @@ _pwnscripts_context = ContextType()
 class ContextWrapper(ContextType):
     '''Wrapper over pwnlib.context.context so that modifications to
     pwnscripts.context.context will propagate correctly to the rest of pwnlib
-    
+
     This wrapper is highly prone to unexpected behaviour. If you're reading this
     and you have a better programmatic suggestion, please raise an Issue/PullRequest!
 

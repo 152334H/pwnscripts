@@ -60,6 +60,7 @@ from pwnscripts.util import is_addr, unpack_hex, offset_match
 log = getLogger('pwnlib.exploit')
 __all__ = ['flush_cache', 'buffer', 'canary', 'stack', 'libc', 'code', 'PIE']
 
+# TODO: Make the default cache name magically detect remote vs. process
 def _get_cache_filename(cache: str, binary_cache={}) -> str:
     '''ONLY FOR INTERNAL USE
     return the filepath to the cache file for printf leaks (for the current context.binary).
@@ -83,7 +84,9 @@ def _get_cache_filename(cache: str, binary_cache={}) -> str:
         sha = sha256()
         sha.update(context.binary.get_data())
         binary_cache[context.binary.path] = sha.hexdigest()
-    return path.join(cachedir, binary_cache[context.binary.path]+'-'+cache)
+    if context.libc is None: # libc is just unknown
+        return path.join(cachedir, binary_cache[context.binary.path]+'-'+cache)
+    return path.join(cachedir, binary_cache[context.binary.path]+'-'+context.libc.id+'-'+cache)
 
 def flush_cache(cache: str='default') -> None:
     '''remove fsb.find_offset's cache for the current `context.binary`.

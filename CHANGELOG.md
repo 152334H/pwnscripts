@@ -5,7 +5,7 @@
    * Note: as with prior ELF/context updates, the magic here can't sync with internal pwntools methods that reference `pwnlib.elf.elf.ELF`.
    * Tests have been updated to reflect this
 ###### Internal changes
- * `libc()` will now catch discrepancies between pwntools-provided binary offsets and libc-database offsets, raising an error if things go wrong.
+ * `libc()` will now catch discrepancies between pwntools-provided binary offsets and libc-database offsets, raising a warning if things go wrong.
 
 #### v0.5.1dev - fsb.find_offset improvements
 ##### Changes

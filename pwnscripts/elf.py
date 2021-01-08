@@ -7,7 +7,8 @@ from pwnscripts.util import is_addr
 __all__ = ['ELF']
 
 class _SymbolDict(pwnlib.elf.elf.dotdict):
-    def __init__(self, *args, owner: 'pwnscripts.elf.ELF', **kwargs):
+    def __init__(self, *args, owner, **kwargs):
+        # owner: pwnscripts.elf.ELF
         super().__init__(*args, **kwargs)
         self._owner = owner
 

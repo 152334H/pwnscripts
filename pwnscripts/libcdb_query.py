@@ -225,11 +225,11 @@ class libc(ELF):
                 if self.symbols[k] == new_value: continue # no conflict here
                 if new_value: # is not 0
                     if self.symbols[k]: # if BOTH aren't zero AND they're different
-                        raise ValueError('pwnscripts.libc: symbol "%s" has conflicting offsets in '
+                        log.warn('pwnscripts.libc: symbol "%s" has conflicting offsets in '
                         '"%s" (%s) vs "%s" (%s)' % (k, self.binary, hex(self.symbols[k]),
                         self.libpath+'.symbols', hex(new_value)))
-                    else: # if new_value is non-zero while the original one is 0
-                        del self.symbols[k] # Remove the symbol (and have it set later in the loop)
+                    else: pass # if new_value is non-zero while the original one is 0
+                    del self.symbols[k] # Remove the symbol (and have it set later in the loop)
                 else: continue # ignore symbols[k] if it's zero and the original symbol isn't
             self.symbols[k] = int(symbols[k], 16)
 

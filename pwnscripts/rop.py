@@ -12,7 +12,7 @@ __all__ = ["ROP"]
 class ROP(rop.rop.ROP):
     '''Extended pwnscripts ROP class
     '''
-    class _Pop():
+    class _Pop(): #TODO: kill this when 4.4.0 becomes the main release
         '''Internal constructor for implementing ROP.pop
         This class is a wrapper, and should not be called outside of ROP().__init__().
         Documentation here is to show examples for ROP.pop (see `pydoc pwnscripts.ROP._Pop`)

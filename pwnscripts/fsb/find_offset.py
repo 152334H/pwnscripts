@@ -31,6 +31,7 @@ the offset of the stack canary:
 >>> fsb.find_offset.canary(printf_io)
 [*] pwnscripts.fsb.find_offset for 'canary': 31
 31
+
 pwnscripts maintains a cache of printf values leaked, such that
 subsequent runs will only run printf_io() if necessary:
 >>> context.libc_database = '...'

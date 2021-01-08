@@ -6,7 +6,38 @@ from pwnscripts.context import context
 from pwnscripts.util import is_addr
 __all__ = ['ELF']
 
+class _SymbolDict(pwnlib.elf.elf.dotdict):
+    def __init__(self, *args, owner: 'pwnscripts.elf.ELF', **kwargs):
+        super().__init__(*args, **kwargs)
+        self._owner = owner
+
+    def __setitem__(self, key: str, value: int):
+        '''overridden dict for ELF.symbols.
+        Expected behaviour:
+        >>> ELF.symbols
+        {'test': 0x128}
+        >>> ELF.symbols['other'] = 0x9125   # 'other' not in ELF.symbols
+        >>> ELF.symbols
+        {'test': 0x128, 'other': 0x9125}
+        >>> ELF.symbols['test'] = 0x7fff12345128 # 'test' in ELF.symbols
+        >>> ELF.symbols
+        {'test': 0x7fff12345128, 'other': 0x7fff1234e125}
+        '''
+        if key in self:
+            self._owner.address = value-self[key] # check base address
+            # note that this implicitly resets self.symbols to a dotdict()...
+            if not is_addr.base(self._owner.address):
+                raise ValueError('pwnscripts.ELF: faulty base address (%s) calculated '
+                'from symbol %r (address %s)' % (hex(self._owner.address), key, hex(value)))
+            # ...meaning that __setitem__ will not recurse here!
+            self._owner.symbols[key] = value
+            self._owner.symbols = _SymbolDict(self._owner.symbols, owner=self._owner)
+        else:
+            super().__setitem__(key, value)
 class ELF(pwnlib.elf.elf.ELF):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.symbols = _SymbolDict(self.symbols, owner=self)
     def calc_base(self, symbol: str, addr: int) -> int:
         '''Given the ASLR address of a symbol,
         calculate (and return) the randomised base address.

@@ -1,7 +1,13 @@
-#### v0.5.1dev - fsb.find_offset improvements
-##### TODO
-* Find some way to do automated testing on the cache system
+#### v0.5.2dev - ELF improvements
+##### Changes
+###### New
+ * Assigning values to ELF.symbols[] will automagically update ELF.address.
+   * Note: as with prior ELF/context updates, the magic here can't sync with internal pwntools methods that reference `pwnlib.elf.elf.ELF`.
+   * Tests have been updated to reflect this
+###### Internal changes
+ * `libc()` will now catch discrepancies between pwntools-provided binary offsets and libc-database offsets, raising an error if things go wrong.
 
+#### v0.5.1dev - fsb.find_offset improvements
 ##### Changes
 ###### New
  * `fsb.find_offset.<>()` will store a **cache** of leaked printf values.
@@ -12,6 +18,7 @@
 ###### Internal changes
  * `__all__` has been added to most source files to prevent namespace leaking.
  * Version history has been shifted to its [own separate file](CHANGELOG.md)
+ * Efforts have been made to clean up code using pylint
 
 ### v0.5.0 - Breaking Behavior
 

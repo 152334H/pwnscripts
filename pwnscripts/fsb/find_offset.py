@@ -104,7 +104,7 @@ def _getprintf(sendprintf: Callable[[bytes],bytes], cache: str) -> Generator:
     '''ONLY FOR INTERNAL USE
     Cached printf bruteforcing.
     Returns: generator that returns (offset, leaked_value) pairs.'''
-    try: sendprintf('testing...')   # This is here to update context.is_local
+    try: sendprintf('testing...\n')   # This is here to update context.is_local
     except Exception as e:  # We'll also do sendprintf() checking, as a bonus.
         log.error('fsb.find_offset: provided sendprintf() function raised %r' % e)
     if not path.exists(cache_filename := _get_cache_filename(cache)):

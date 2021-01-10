@@ -7,19 +7,32 @@ showing off common use-cases and best practices.
 #TODO: Figure out why some tests have a small chance of failure.
 import unittest as ut
 # Unfortunately, pytest interprets every `test.*` function as a testable function, so no import * here
-from pwnscripts import context, log, fsb, unpack_hex, fmtstr_payload, is_wsl, unpack_many_hex, pack, libc, ELF, ROP
+from pwnscripts import context, log, fsb, unpack_hex, fmtstr_payload, is_wsl, unpack_many_hex, pack, libc, ELF, ROP, remote
 import pwnscripts.elf
 from os import system, path
 from subprocess import CalledProcessError
-
 import os, glob
 
 class BinTests(ut.TestCase):
+    def test_AA_is_local(self):
+        '''Testing context.is_local.
+        Make sure this runs first, because context.is_local will be defined afterwards.'''
+        context.binary = ELF.from_assembly('syscall; ret')
+        self.assertRaises(RuntimeError, lambda: context.is_local)   # Should be undefined
+        r = context.binary.process()
+        self.assertEqual(True, context.is_local)
+        # Test that remote cache != local cache
+        local_cache_name = fsb.find_offset._get_cache_filename('')
+        r = remote('github.com', 443) # HACK; need something to connect to that will always exist
+        remote_cache_name = fsb.find_offset._get_cache_filename('')
+        self.assertEqual(False, context.is_local)
+        self.assertNotEqual(local_cache_name, remote_cache_name)
+        
     def test_A_common_sense(self):
         # check base necessities
         for i in range(1,3): assert not path.isfile('%d.out'%i)
         assert path.isfile('/usr/bin/gcc')
-    
+
     def test_B_libc(self):
         '''A demonstration of
         1. Error catching for poorly used libc() or libc_database()
@@ -48,7 +61,7 @@ class BinTests(ut.TestCase):
         assert lib.symbols['str_bin_sh'] == lib.address + orig_binsh	# ELF inherited property
         assert isinstance(lib.symbols, pwnscripts.elf._SymbolDict)  # Make sure that the ELF monkeypatching is working
         context.clear() # Ensure that libc does not affect future tests
- 
+
     def test_C_printf_buffer_bruteforce(self):
         '''A simple example of fsb.find_offset.
         This behaviour is essentially already implemented in pwntools under FmtStr().'''
@@ -57,31 +70,31 @@ class BinTests(ut.TestCase):
             system('./examples/1.c')    # compile the program
             context.log_level = 'warn'
             context.binary = '1.out'
-            
+
             @context.quiet
             def printf(l: str): # First, a function to abstract C printf() i/o
                 r = context.binary.process()
                 r.sendafter('\n', l)
                 return r.recvline()
-            
+
             # Let's say we want to write to s[64]. We first find the printf() offset to s[]:
             with context.local(log_level='info'):   # show info for testing purposes
                 offset = fsb.find_offset.buffer(printf, maxlen=49)  # maxlen is 50-1 (-1 due to fgets)
-            
+
             # Then, make use of pwntools' fmtstr library to write to there:
             r = context.binary.process()
             s_addr = unpack_hex(r.recvline())  #another pwnscripts func
             payload = fmtstr_payload(offset, {s_addr+56: 0x12345678}, write_size='short')
             r.sendline(payload)
-            
+
             # Finally, grab back the input (and verify that the flag is there)
             lastline = r.recvall().split(b'\n')[-1]
             r.close()
             self.assertEqual(lastline, b'flag{Goodjob}')    
-            
+
         finally:
             system('rm 1.out')
-        
+
     def test_D_printf_alt_bruteforce(self):
         '''A more complicated use case for fsb.find_offset.
         This uses features that aren't available in pwntools.
@@ -142,7 +155,7 @@ class BinTests(ut.TestCase):
 
         for f in glob.glob(context.libc.libpath+'*'):   # not that smart
             os.remove(f)
-    
+
     def test_F_ROP(self):
         '''Tests for the various ROP extensions added'''
         context.arch = 'amd64'
@@ -165,5 +178,6 @@ class BinTests(ut.TestCase):
         "0x0050:   b'/bin/sh\\x00'")
 
 # TODO: printf cache testing
+# TODO: split apart these tests instead of shoving everything into one class
 if __name__ == '__main__':
     ut.main()

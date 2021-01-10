@@ -9,7 +9,7 @@ import pwnscripts
 log = getLogger('pwnlib.exploit')
 __all__ = ['context', '_pwntools_context']
 _pwntools_context = context.context
-_pwnscripts_LOCALS = ['libc_database', 'libc', 'binary', 'clear']
+_pwnscripts_LOCALS = ['libc_database', 'libc', 'binary', 'clear', 'is_local', '_local']
 
 class ContextType(context.ContextType):
     '''This is the extended class that inherits from
@@ -25,7 +25,22 @@ class ContextType(context.ContextType):
     '''
     # Waiting for python3.9's dict unions here...
     defaults = {**context.ContextType.defaults,
-                **{'libc_database': None, 'libc': None, 'binary': None}}
+                **{'libc_database': None, 'libc': None, 'binary': None, '_local': None}}
+
+    @context._validator
+    def _local(self, state: bool) -> bool:  # simple wrapper to fit into `context`'s framework
+        if isinstance(state, bool): return state
+        
+    @property
+    def is_local(self) -> bool:
+        '''Check if the most recently opened tube was a local process().
+        Returns: bool.
+            True if pwnscripts observed a local binary process(),
+            False if pwnscripts observed a remote() connection,
+            RuntimeError if neither has been detected.
+        ''' # NOTE: this attribute should be updated by other parts of pwnscripts.
+        if isinstance(self._local, bool): return self._local
+        raise RuntimeError('pwnscripts.context: no running tubes have been detected thus far.')
 
     def clear(self, *a, **kw):
         '''overwritten pwnscripts method: clear pwnscripts context as well

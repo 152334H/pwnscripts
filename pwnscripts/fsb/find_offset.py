@@ -61,7 +61,6 @@ from pwnscripts.util import is_addr, unpack_hex, offset_match
 log = getLogger('pwnlib.exploit')
 __all__ = ['flush_cache', 'buffer', 'canary', 'stack', 'libc', 'code', 'PIE']
 
-# TODO: Make the default cache name magically detect remote vs. process
 def _get_cache_filename(cache: str, binary_cache={}) -> str:
     '''ONLY FOR INTERNAL USE
     return the filepath to the cache file for printf leaks (for the current context.binary).
@@ -81,6 +80,7 @@ def _get_cache_filename(cache: str, binary_cache={}) -> str:
         'pwnscripts.fsb.find_offset needs context.binary to be set for caching.'
         'if no binary is available, run fsb.find_offset.<func>(..., cache=None)'
     )
+    if context.is_local is False: cache += '-remote'
     if context.binary.path not in binary_cache: # only do hashing once-per-run
         sha = sha256()
         sha.update(context.binary.get_data())
@@ -104,6 +104,9 @@ def _getprintf(sendprintf: Callable[[bytes],bytes], cache: str) -> Generator:
     '''ONLY FOR INTERNAL USE
     Cached printf bruteforcing.
     Returns: generator that returns (offset, leaked_value) pairs.'''
+    try: sendprintf('testing...')   # This is here to update context.is_local
+    except Exception as e:  # We'll also do sendprintf() checking, as a bonus.
+        log.error('fsb.find_offset: provided sendprintf() function raised %r' % e)
     if not path.exists(cache_filename := _get_cache_filename(cache)):
         with open(cache_filename, 'x') as f: pass   # make the file
     log.debug('cache is at %s' % cache_filename)

@@ -4,8 +4,11 @@
  * Assigning values to ELF.symbols[] will automagically update ELF.address.
    * Note: as with prior ELF/context updates, the magic here can't sync with internal pwntools methods that reference `pwnlib.elf.elf.ELF`.
    * Tests have been updated to reflect this
+ * `fsb-cache` will automatically detect different libc versions && differentiate remote vs. local bruteforce attempts.
+ * `context.is_local` to check if the most recently opened tube is local/remote. This involves monkeypatching for `ELF()` and `remote()`; there are a number of cases where `.is_local` will fail to update properly.
 ###### Internal changes
- * `libc()` will now catch discrepancies between pwntools-provided binary offsets and libc-database offsets, raising a warning if things go wrong.
+ * `libc()` will now catch discrepancies between pwntools-provided binary offsets and libc-database offsets, raising a debug log if things go wrong.
+ * pylint whitespace
 
 #### v0.5.1dev - fsb.find_offset improvements
 ##### Changes

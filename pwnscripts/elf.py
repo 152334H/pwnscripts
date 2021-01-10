@@ -4,7 +4,7 @@ from subprocess import check_output
 import pwnlib
 from pwnscripts.context import context
 from pwnscripts.util import is_addr
-__all__ = ['ELF']
+__all__ = ['ELF', 'remote']
 
 class _SymbolDict(pwnlib.elf.elf.dotdict):
     def __init__(self, *args, owner, **kwargs):
@@ -75,6 +75,17 @@ class ELF(pwnlib.elf.elf.ELF):
         Returns:
             pwnlib.tubes.process.process() object
         '''
+        context._local = True # Make sure to update .is_local
         if context.libc is None:
             return super().process(argv, *a, **kw)
         return context.libc.run_with(self, argv, *a, **kw)
+    
+    def from_assembly(asm, *a, **kw): # cheap override
+        return ELF(pwnlib.asm.make_elf_from_assembly(asm, *a, **kw))
+
+# Temp: put remote() override here until there is a better file to put it in
+from pwnlib import tubes
+class remote(tubes.remote.remote):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        context._local = False

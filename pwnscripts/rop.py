@@ -7,11 +7,12 @@ from pwnlib.rop.call import Call
 from pwnlib.util.packing import flat
 from pwnlib.shellcraft import registers
 from pwnscripts.context import context
+__all__ = ["ROP"]
 
 class ROP(rop.rop.ROP):
     '''Extended pwnscripts ROP class
     '''
-    class _Pop():
+    class _Pop(): #TODO: kill this when 4.4.0 becomes the main release
         '''Internal constructor for implementing ROP.pop
         This class is a wrapper, and should not be called outside of ROP().__init__().
         Documentation here is to show examples for ROP.pop (see `pydoc pwnscripts.ROP._Pop`)
@@ -47,7 +48,7 @@ class ROP(rop.rop.ROP):
     class _Syscall():
         '''Internal constructor for implementing ROP.system_call
         This class is a wrapper, and should not be called outside of ROP().__init__().
-        Documentation here is to show examples for ROP.system_call (see `pydoc pwnscripts.ROP._Syscall`)
+        Documentation here shows examples for ROP.system_call (see `pydoc pwnscripts.ROP._Syscall`)
         '''
         def __init__(self, rop):
             self.rop = rop
@@ -112,13 +113,13 @@ class ROP(rop.rop.ROP):
                 if parse_version(PWNLIB_VER) < parse_version('4.4.0dev0'):
                     raise NotImplementedError('"syscall; ret" gadgets are only available on the '
                     'latest version of pwntools.')
-                # pwnlib.rop.srop.syscall_instructions == {'amd64': ['syscall'], 'arm': ['svc 0'], ...}
+                # rop.srop.syscall_instructions == {'amd64': ['syscall'], 'arm': ['svc 0'], ...}
                 syscall = self.rop.find_gadget([rop.srop.syscall_instructions[context.arch][0], 'ret'])
             else:   # Can lazily use ROP's __getattr__ here
                 syscall = self.rop.syscall
             if syscall is None:
                 raise AttributeError("ROP unable to find syscall gadget")
-            
+
             # write the syscall
             id, label = self.label(id)
             self.rop.raw(Call(label, syscall.address, [id] + args, ABI.syscall()))

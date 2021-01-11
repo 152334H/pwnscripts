@@ -7,6 +7,7 @@ showing off common use-cases and best practices.
 '''
 import unittest as ut
 from pwnscripts import *
+from os import system, path
 
 class BinTests(ut.TestCase):
     def test_A_common_sense(self):

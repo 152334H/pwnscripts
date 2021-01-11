@@ -8,13 +8,15 @@ from os import path, system
 from subprocess import check_output, CalledProcessError
 from pwnlib.ui import options
 from pwnlib.log import getLogger
-from pwnlib.elf.elf import ELF
 from pwnlib.util.misc import which
 from pwnlib.util.lists import concat
 from pwnlib.tubes.process import process
-from pwnscripts.util import is_addr
 from pwnscripts.context import context
+#from pwnlib.elf.elf import ELF
+from pwnscripts.elf import ELF
 log = getLogger('pwnlib.exploit')
+__all__ = ['libc_database', 'libc']
+
 # Helpfully taken from the one_gadget README.md
 def _one_gadget(filename):
     return list(map(int, check_output(['one_gadget', '--raw', filename]).split(b' ')))
@@ -56,11 +58,12 @@ So, a few things to note about this.
     Although we can inherit from libc_database here, there's still a significant increase in maintenence cost.
    b. keep the API low maintenence, and just raise NotImplementedError if there's even a small possibility of incompatabilities.
     This will allow for minimal libc().calc_base() and libc_database().identify() usage, but not much else.
+3. pwntools already implemented libc.rip API queries.
 '''
 class libc_database():
     '''An object to represent an existing libc-database stored locally.
     All libc-database functions are available as object methods.
-    
+
     >>> context.libc_database = 'libc-database'
     >>> print( context.libc_database.dump().decode() )
     offset___libc_start_main_ret = 0x21b97
@@ -86,7 +89,7 @@ class libc_database():
 
         Arguments:
             `leaks`: dict with key-pairs of symbol_name:addr
-        
+
         Returns:
             a `libc()` object with `address` set in accordance with the
             leaked addresses provided in `leaks`.
@@ -112,9 +115,9 @@ class libc_database():
         found = self.find(*args).strip().split(b'\n')
 
         if len(found) == 1: # if a single libc was isolated
-            # NOTE: assuming ./find output format is "<url> (<id>)". 
+            # NOTE: assuming ./find output format is "<url> (<id>)".
             # NOTE (continued): this behaviour has changed in the past!
-            libcid = found[0].split(b'(')[-1][:-1]  
+            libcid = found[0].split(b'(')[-1][:-1]
             log.info(b'found libc! id: ' + libcid)
             lib = libc(db=self, id=libcid.decode('utf-8'))
             # Also help to calculate self.base
@@ -180,7 +183,7 @@ class libc(ELF):
 
             `id`:
                 a libc-database identifier for the binary
-            
+
             `db_dir`:
                 a filepath to a libc-database.
 
@@ -188,7 +191,7 @@ class libc(ELF):
                 an existing libc_database() object.
                 This will take precedence over `db_dir`, if (for whatever reason)
                 both happen to be provided.
-        
+
         Returns:
             a libc() object.
         '''
@@ -199,7 +202,7 @@ class libc(ELF):
             self.db = db
         else:
             raise ValueError("`db`="+repr(db)+"does not seem to be an instance of libc_database().")
-        
+
         if binary is not None:
             id = self.db.id(binary)
         if id is not None:  # Assume the id is valid
@@ -212,14 +215,26 @@ class libc(ELF):
         else:
             raise ValueError('libc(...) requires binary="/path/to/libc.so.6"'+\
                              ' or identifer="<libc identifier>" as an argument')
-    
+
     def __id_init__(self):
         # load up all library symbols; adds things like str_bin_sh uncaught by ELF()
         with open(self.libpath+'.symbols') as f:    # Weird thing: this breaks if 'rb' is used.
             symbols = dict(l.split() for l in f.readlines())
         for k in symbols:
+            new_value = int(symbols[k],16)
+            if k in self.symbols: # if we might have symbol conflicts...
+                if self.symbols[k] == new_value: continue # no conflict here
+                if new_value: # is not 0
+                    if self.symbols[k]: # if BOTH aren't zero AND they're different
+                        log.debug('pwnscripts.libc: symbol "%s" has conflicting offsets in '
+                        '"%s" (%s) vs "%s" (%s)' % (k, self.binary, hex(self.symbols[k]),
+                        self.libpath+'.symbols', hex(new_value)))
+                    else: pass # if new_value is non-zero while the original one is 0
+                    # NOTE: Don't remove the above line; it's there for future implementation
+                    del self.symbols[k] # Remove the symbol (and have it set later in the loop)
+                else: continue # ignore symbols[k] if it's zero and the original symbol isn't
             self.symbols[k] = int(symbols[k], 16)
-        
+
         # load up one_gadget offsets in advance
         if which('one_gadget') is None:
             log.info('one_gadget does not appear to exist in PATH. ignoring.')
@@ -227,29 +242,10 @@ class libc(ELF):
         else:
             self.one_gadget = _one_gadget(self.libpath+'.so')
 
-    def calc_base(self, symbol: str, addr: int) -> int:
-        '''Given the ASLR address of a libc function,
-        calculate (and return) the randomised base address.
-        This will also silently set self.address to be the base - 
-        further queries to self.symbols[] will be adjusted to match.
-        
-        Arguments:
-            `symbol`: the name of the function/symbol found in libc
-                e.g. read, __libc_start_main, fgets
-            `addr`: the actual ASLR address assigned to the libc symbol
-                for the current active session
-                e.g. 0x7f1234567890
-        Returns: the ASLR base address of libc (for the active session)
-        '''
-        self.address = 0    # reset self.address if it is currently set
-        self.address = addr - self.symbols[symbol]
-        assert is_addr.base(self.address)   # check that base addr is reasonable
-        return self.address
-
     def select_gadget(self, option: int=None) -> int:
         '''An interactive function to choose a preferred
         one_gadget requirement mid-exploit.
-        
+
         Arguments:
             `option`: if given,
                 used to immediately select a one_gadget; interactive menu will be skipped
@@ -304,8 +300,8 @@ class libc(ELF):
 
         Arguments:
             `binary`: This is an ELF(). Please don't try to use a filename like with process().
-            `argv`: arguments to be passed 
-        
+            `argv`: arguments to be passed
+
         Internally, this relies on executing ./ld-linux.so from the libc-database.
         '''
         # First, find this libc's ld-linux.so with a glob*.
@@ -315,5 +311,9 @@ class libc(ELF):
         ld_linux = ld_linux_glob[0] # Guaranteed to exist as a file; barring race conds
         # Next, run the process as ./ld-linux.so --library-path lib_dir binary [ARGS] ...
         log.info('[libc] Running %r with libs in %r!' % (binary.path, lib_dir))
+        # HACK
+        if 'class_override' in kw:
+            proc = kw['class_override']
+            kw = dict((k,v) for k,v in kw.items() if k != 'class_override')
+            return proc([ld_linux, '--library-path', lib_dir, binary.path]+argv, *a, **kw)
         return process([ld_linux, '--library-path', lib_dir, binary.path]+argv, *a, **kw)
-

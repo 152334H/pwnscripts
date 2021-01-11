@@ -4,7 +4,6 @@ These tests are checked with Github Actions, and should all work on a fresh inst
 This file also serves to demonstrate some of the features of pwnscripts,
 showing off common use-cases and best practices.
 '''
-#TODO: Figure out why some tests have a small chance of failure.
 import unittest as ut
 # Unfortunately, pytest interprets every `test.*` function as a testable function, so no import * here
 from pwnscripts import context, log, fsb, unpack_hex, fmtstr_payload, is_wsl, unpack_many_hex, pack, libc, ELF, ROP, remote
@@ -13,8 +12,11 @@ from os import system, path
 from subprocess import CalledProcessError
 import os, glob
 
-class BinTests(ut.TestCase):
-    def test_AA_is_local(self):
+class AAA_ImportantFirstTests(ut.TestCase):
+    '''These are tests that MUST execute before other tests.
+    The class name starts with AAA_ to ensure that these testcases are executed first.
+    '''
+    def test_is_local(self):
         '''Testing context.is_local.
         Make sure this runs first, because context.is_local will be defined afterwards.'''
         context.binary = ELF.from_assembly('syscall; ret')
@@ -27,13 +29,14 @@ class BinTests(ut.TestCase):
         remote_cache_name = fsb.find_offset._get_cache_filename('')
         self.assertEqual(False, context.is_local)
         self.assertNotEqual(local_cache_name, remote_cache_name)
-        
-    def test_A_common_sense(self):
+
+    def test_required_files(self):
         # check base necessities
         for i in range(1,3): assert not path.isfile('%d.out'%i)
         assert path.isfile('/usr/bin/gcc')
 
-    def test_B_libc(self):
+class LibcTests(ut.TestCase):
+    def test_libc(self):
         '''A demonstration of
         1. Error catching for poorly used libc() or libc_database()
         2. common uses of context.libc_database, context.libc
@@ -62,7 +65,31 @@ class BinTests(ut.TestCase):
         assert isinstance(lib.symbols, pwnscripts.elf._SymbolDict)  # Make sure that the ELF monkeypatching is working
         context.clear() # Ensure that libc does not affect future tests
 
-    def test_C_printf_buffer_bruteforce(self):
+    def test_local_libc(self):
+        '''Simple test to check that local-* libcs will crash for self.dir()
+        It's important that we *don't* run `context.libc = 'examples/libc.so.6' for this test.
+        Although it'll work fine on GitHub Actions, an actual user (like you) may have
+        a fully ./get'd libc-database, and 'examples/libc.so.6' will be identified as a non-local
+        lib if the binary filepath is passed to context.libc.
+        '''
+        print()
+        LOCAL_ID = 'local-18292bd12d37bfaf58e8dded9db7f1f5da1192cb'
+        context.libc_database = 'libc-database'
+        if not path.isfile(path.join(context.libc_database.db_dir, 'db', LOCAL_ID+'.so')):
+            context.libc_database.add('examples/libc.so.6')
+        context.libc = LOCAL_ID
+        self.assertRaises(ValueError, context.libc.dir)
+        #
+        for f in glob.glob(context.libc.libpath+'*'):   # not that smart
+            os.remove(f)
+        context.clear() # Ensure that libc does not affect future tests
+
+class PrintfTests(ut.TestCase):
+    '''Any test related to the fsb module goes under here
+    TODO: Figure out why some tests have a small chance of failure.
+    TODO: printf cache testing
+    '''
+    def test_buffer_bruteforce(self):
         '''A simple example of fsb.find_offset.
         This behaviour is essentially already implemented in pwntools under FmtStr().'''
         print()
@@ -95,7 +122,7 @@ class BinTests(ut.TestCase):
         finally:
             system('rm 1.out')
 
-    def test_D_printf_alt_bruteforce(self):
+    def test_alt_bruteforce(self):
         '''A more complicated use case for fsb.find_offset.
         This uses features that aren't available in pwntools.
 
@@ -137,28 +164,11 @@ class BinTests(ut.TestCase):
         finally:
             system('rm 3.out')
 
-    def test_E_libc(self):
-        '''Simple test to check that local-* libcs will crash for self.dir()
-
-        It's important that we *don't* run `context.libc = 'examples/libc.so.6' for this test.
-        Although it'll work fine on GitHub Actions, an actual user (like you) may have
-        a fully ./get'd libc-database, and 'examples/libc.so.6' will be identified as a non-local
-        lib if the binary filepath is passed to context.libc.
-        '''
-        print()
-        LOCAL_ID = 'local-18292bd12d37bfaf58e8dded9db7f1f5da1192cb'
-        context.libc_database = 'libc-database'
-        if not path.isfile(path.join(context.libc_database.db_dir, 'db', LOCAL_ID+'.so')):
-            context.libc_database.add('examples/libc.so.6')
-        context.libc = LOCAL_ID
-        self.assertRaises(ValueError, context.libc.dir)
-
-        for f in glob.glob(context.libc.libpath+'*'):   # not that smart
-            os.remove(f)
-
-    def test_F_ROP(self):
+class GeneralTests(ut.TestCase):
+    '''For any test cases that do not fit the preceding classes.'''
+    def test_ROP(self):
         '''Tests for the various ROP extensions added'''
-        context.arch = 'amd64'
+        context.update(arch='amd64', bits=64)
         context.binary = ELF.from_assembly('syscall; ret; pop rax; pop rdi; pop rsi; pop rdx; ret; pop rcx; ret; pop rbx; ret;')
         r = ROP(context.binary)
         r.pop.rcx(2)
@@ -177,7 +187,5 @@ class BinTests(ut.TestCase):
         "0x0048:       0x10000000 SYS_execve\n"
         "0x0050:   b'/bin/sh\\x00'")
 
-# TODO: printf cache testing
-# TODO: split apart these tests instead of shoving everything into one class
 if __name__ == '__main__':
     ut.main()

@@ -1,4 +1,4 @@
-# pwnscripts (dev-0.5.1)
+# pwnscripts (0.6.0)
 [![Tests](https://github.com/152334H/pwnscripts/workflows/Python%20package/badge.svg)](https://github.com/152334H/pwnscripts/actions)
 [![PyPI package](https://badge.fury.io/py/pwnscripts.svg)](https://pypi.org/project/pwnscripts/)
 [![Python](https://img.shields.io/pypi/pyversions/pwnscripts)](https://www.python.org/downloads/)
@@ -50,8 +50,8 @@ Adding local libc /path/to/pwnscripts/examples/libc.so.6 (id local-18292bd12d37b
 
 The `libc()` object is a subclass of pwntools' `pwnlib.elf.elf.ELF()`. It starts off with a base address of `0`, but you can change that to match a remote executable by providing it with leaked addresses:
 ```python
->>> context.libc.calc_base('scanf', 0x7fffa3b8b040) # Provide a leaked address to libc
->>> context.libc.address
+>>> context.libc.symbols['scanf'] = 0x7fffa3b8b040 # Provide a leaked address to libc
+>>> context.libc.address  # This is automagically updated after assignment
 0x7fffa3b10000
 >>> context.libc.symbols['str_bin_sh']  # Symbols from libc-database are stored in context.libc
 0x7fffa3cc3e9a
@@ -139,9 +139,9 @@ With this function, We can automate the process of offset identification with `f
 With the canary found, we can move on to leaking libc. Since `__libc_start_main_ret` is located immediately after the canary in the stack, the `printf()` cache maintained by `fsb.find_offset` will speed things up immensely:
 ```python
 >>> context.libc_database = '../libc-database'       # replace with yours
->>> context.libc = '/lib/x86_64-linux-gnu/libc.so.6' # ibid
+>>> libc = libc('/lib/x86_64-linux-gnu/libc.so.6') # ibid
 >>> libc_offset = fsb.find_offset.libc(printf,
-... offset=context.libc.symbols['__libc_start_main_ret']&0xfff)  # Specify that we're looking for a value matching __l_s_m_r
+... offset=libc.symbols['__libc_start_main_ret']&0xfff)  # Specify that we're looking for a value matching __l_s_m_r
 [DEBUG] cache is at /home/throwaway/.cache/.pwntools-cache-3.8/fsb-cache/07e93d243fc1a7d88432cfb25bdc8bbb7b65fcabd6bb96ccea9c1ad027f2039f-default
 (cached) [DEBUG] pwnscripts: extracted 0x7c
 (cached) [DEBUG] pwnscripts: extracted 0x4141414141414141
@@ -171,7 +171,26 @@ print(fsb.leak.deref_extractor(r.recvline()))  # [b'\x80N\x03p\x94\x7f', b' \xeb
 ```
 ### Minor features
 Pwnscripts also comes with a few minor extensions and functions:
-* `ROP`: an extension of `pwnlib.rop.rop.ROP`. Core feature is to simplify ROP building outside of SIGROP:
+* `util`: utility functions absent from pwntools. Some of the more useful things:
+  * `is_addr` is an object you can use to check for specific address types. e.g.
+    ```python
+    >>> context.arch = 'amd64'
+    >>> is_addr.PIE(0x55f83ba1034d)
+    True
+    >>> is_addr.stack(0xba081240a911)
+    False
+    >>> is_addr.libc(0x7fba912bd93d)
+    True
+    ```
+    These functions are heuristic-based: they don't guarantee correctness, but tend to hit the mark nonetheless.
+  * `unpack_*`: Better unpacking functions. Some examples:
+    ```python
+    >>> unpack_many_hex(b'jfawoa0x1234aokfw 0x123')
+    [0x1234a, 0x123]
+    >>> unpack_bytes(b'\x12\x34\x56\x78\x90\xab\xcd\xef', 6)
+    0xab9078563412
+    ```
+* `rop.py`: an extension of pwntools' `pwnlib.rop.rop.ROP`. Core feature is to simplify ROP building outside of SIGROP:
   ```python
   >>> context.arch = 'amd64'
   >>> r = ROP('./binary')
@@ -187,7 +206,10 @@ Pwnscripts also comes with a few minor extensions and functions:
     0x0038:         0x4022b4 SYS_execve
     0x0040:   b'/bin/sh\x00'
     ```
- * other unlisted features in development
+* As was implicit in prior sections, `context` has been expanded with a number of extra attributes:
+   * `.libc` and `.libc_database`, which are useful for everything mentioned [above](#libc)
+   * `.is_local`, to check if the most recently opened pwntools `tube` is a remote/local process
+* other unlisted features in development
 
 Proper examples for `pwnscripts` are available in `examples/` and `user_tests_and_examples.py`.
 ## I tried using it; it doesn't work!

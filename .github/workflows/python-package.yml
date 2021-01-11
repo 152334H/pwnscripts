@@ -42,7 +42,9 @@ jobs:
       run: |
         chmod +x examples/*.c # Might be rw-
         export TERM=linux export TERMINFO=/etc/terminfo
-        pytest || pytest || pytest   # Bad idea
+        pytest -k 'not PrintfTests' # Non-printf tests should always succeed.
+        # Bad idea; but stack offsets are rather unpredictable.
+        pytest -k PrintfTests || pytest -k PrintfTests || pytest -k PrintfTests
     - name: Build and publish
       env:
         TWINE_USERNAME: ${{ secrets.PYPI_USERNAME }}

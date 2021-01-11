@@ -58,6 +58,7 @@ So, a few things to note about this.
     Although we can inherit from libc_database here, there's still a significant increase in maintenence cost.
    b. keep the API low maintenence, and just raise NotImplementedError if there's even a small possibility of incompatabilities.
     This will allow for minimal libc().calc_base() and libc_database().identify() usage, but not much else.
+3. pwntools already implemented libc.rip API queries.
 '''
 class libc_database():
     '''An object to represent an existing libc-database stored locally.

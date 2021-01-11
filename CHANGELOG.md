@@ -1,3 +1,9 @@
+### v0.6.0 - caching, README, cleanup
+##### Changes
+Most changes are listed under the v0.5.*dev headers. Other changes include:
+ * updating the README.md to match many new features
+ * automated tests have been cleaned up & categorised
+
 #### v0.5.2dev - ELF improvements
 ##### Changes
 ###### New
@@ -8,6 +14,7 @@
  * `context.is_local` to check if the most recently opened tube is local/remote. This involves monkeypatching for `ELF()` and `remote()`; there are a number of cases where `.is_local` will fail to update properly.
 ###### Internal changes
  * `libc()` will now catch discrepancies between pwntools-provided binary offsets and libc-database offsets, raising a debug log if things go wrong.
+ * increase the number of TODOs
  * pylint whitespace
 
 #### v0.5.1dev - fsb.find_offset improvements

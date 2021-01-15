@@ -19,7 +19,10 @@ __all__ = ['libc_database', 'libc']
 
 # Helpfully taken from the one_gadget README.md
 def _one_gadget(filename):
-    return list(map(int, check_output(['one_gadget', '--raw', filename]).split(b' ')))
+    try: return list(map(int, check_output(['one_gadget', '--raw', filename]).split(b' ')))
+    except CalledProcessError:
+        log.warn("one_gadget failed to find anything for %s!" % filename)
+        return []
 
 def _db(db_dir: str):
     '''Simple wrapper to return a libc_database() object for a given

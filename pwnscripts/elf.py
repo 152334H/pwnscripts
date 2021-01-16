@@ -89,3 +89,30 @@ class remote(tubes.remote.remote):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         context._local = False
+
+_orig_attach = pwnlib.gdb.attach
+
+def _gdb_load_source_cmd(debug_libc: str):
+    return "set substitute-path '{}' '{}'".format()
+def attach(r, gdbscript='', *args, **kwargs):
+    '''overridden attach() function from pwnscripts.
+    When context.libc is set appropriately, and
+    the libc-database is updated with source/debug files,
+    gdb will launch with source-level debugging enabled for libc.'''
+    if context.libc is not None and context.libc_database is not None:
+        debug_libc = path.join(context.libc.dir(), 'debug', 'libc.so.6')
+        source_path = path.join(context.libc.dir(), 'source')
+        if path.exists(debug_libc) and path.exists(source_path):
+            libc_base = context.libc.address if context.libc.address else \
+                next(v for k,v in r.libs().items() if context.libc.dir()+'/libc.so.6' in k) # maybe also just update libc.address?
+            sec_str = ' '.join('-s {} 0x{:x}'.format(s.name, libc_base+s.header.sh_addr) for s in context.libc.sections if s.name and s.header.sh_addr)
+            text_addr = context.libc.get_section_by_name('.text').header.sh_addr + libc_base
+            # TODO: do something better than shell=True
+            build_dir = check_output("strings '{}' | grep '/build/[^/]*' -o | head -1".format(debug_libc), shell=True).strip().decode()
+            # This is the final step, and is the only part of gdb.attach() that gets affected.
+            gdbscript = 'add-symbol-file {} 0x{:x} {} \n'.format(debug_libc, text_addr, sec_str) +\
+                        "set substitute-path '{}' '{}'\n".format(build_dir, source_path) + gdbscript
+            log.info('libc source-level debugging is enabled!')
+        else: log.info('debug symbols not available for this libc.')
+    return _orig_attach(r, gdbscript, *args, **kwargs)
+pwnlib.gdb.attach = attach

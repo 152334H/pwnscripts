@@ -4,6 +4,7 @@ from subprocess import check_output
 import pwnlib
 from pwnscripts.context import context
 from pwnscripts.util import is_addr
+log = pwnlib.log.getLogger('pwnlib.exploit')
 __all__ = ['ELF', 'remote']
 
 class _SymbolDict(pwnlib.elf.elf.dotdict):

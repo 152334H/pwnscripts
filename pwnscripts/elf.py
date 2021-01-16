@@ -80,7 +80,7 @@ class ELF(pwnlib.elf.elf.ELF):
         if context.libc is None:
             return super().process(argv, *a, **kw)
         return context.libc.run_with(self, argv, *a, **kw)
-    
+
     def from_assembly(asm, *a, **kw): # cheap override
         return ELF(pwnlib.asm.make_elf_from_assembly(asm, *a, **kw))
 
@@ -93,8 +93,6 @@ class remote(tubes.remote.remote):
 
 _orig_attach = pwnlib.gdb.attach
 
-def _gdb_load_source_cmd(debug_libc: str):
-    return "set substitute-path '{}' '{}'".format()
 def attach(r, gdbscript='', *args, **kwargs):
     '''overridden attach() function from pwnscripts.
     When context.libc is set appropriately, and

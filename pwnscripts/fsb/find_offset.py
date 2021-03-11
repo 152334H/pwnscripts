@@ -54,7 +54,7 @@ from typing import Callable, Optional, Generator
 from functools import wraps, partial
 from pwnlib.log import getLogger
 from pwnlib.util.cyclic import cyclic, cyclic_find
-from pwnlib.util.packing import p32
+from pwnlib.util.packing import p32, pack
 from pwnscripts import config
 from pwnscripts.context import context
 from pwnscripts.util import is_addr, unpack_hex, offset_match
@@ -119,7 +119,7 @@ def _getprintf(sendprintf: Callable[[bytes],bytes], cache: str) -> Generator:
                 if i in cache_dict: # NOTE: replace the proceeding line with something better
                     if context.log_level == 10: print('(cached) ', end='')
                 else: # This is the part where an EOFError might occur.
-                    payload = 'A'*8 + '%{}$p\n'.format(i) # an unaligned printf will fail here
+                    payload = '%{}$p\n'.format(i) # an unaligned printf will fail here
                     extract = sendprintf(payload)
                     if b"(nil)" in extract: cache_dict[i] = 0
                     else: cache_dict[i] = unpack_hex(extract)    # Error will be -1
@@ -134,19 +134,19 @@ def _getprintf(sendprintf: Callable[[bytes],bytes], cache: str) -> Generator:
         with open(cache_filename, 'w') as f:
             f.write('\n'.join('%d:%d'%t for t in cache_dict.items()))
 
-def _sendprintf(requirement: Callable[[int,Optional[str]],bool]=None, has_regex: bool=False):
+def _sendprintf(requirement: Callable[[int,Optional[str]],bool]=None, provide: str=False):
     '''ONLY FOR INTERNAL USE
     Generic printf bruteforcer for leaking values.
     '''
-    if requirement is None: return partial(_sendprintf, has_regex=has_regex)    # ???
+    if requirement is None: return partial(_sendprintf, provide=provide)    # ???
     @wraps(requirement)
     def inner(sendprintf: Callable[[bytes],bytes], offset: int=None, cache: str='default') -> int:
-        if has_regex is False: _requirement = lambda v,_: requirement(v)
+        if provide is False: _requirement = lambda v,_: requirement(v)
         else: _requirement = requirement
         # Actual code
         leak_generator = _getprintf(sendprintf, cache)
         for i,extract in leak_generator:
-            if _requirement(extract, offset):
+            if _requirement(extract, i if provide == 'i' else offset): # this ternary is only here for _buffer
                 log.info('%s for %r: %d' % (__name__, requirement.__name__, i))
                 leak_generator.close() # Maybe we should have this run even on RuntimeError?
                 return i
@@ -154,10 +154,12 @@ def _sendprintf(requirement: Callable[[int,Optional[str]],bool]=None, has_regex:
     return inner
 
 #'''
-@_sendprintf
-def _buffer(resp) -> int:
-    expected = (0x41414141 if context.arch == 'i386' else 0x4141414141414141)
-    return expected == resp
+@_sendprintf(provide='i') # this is a HACK; regex acts as a way to pass i here
+def _buffer(resp, i: int) -> int:
+    '''The first bytes on the buffer will be "%{}$p\n". Search for that.'''
+    expect = '%{}$p\n'.format(i).encode()
+    if len(expect) > context.bytes: expect = expect[:context.bytes]
+    return expect == pack(resp)[:len(expect)]
 
 def buffer(sendprintf: Callable[[bytes],bytes], maxlen=20) -> int:
     '''Bruteforcer to locate the offset of the input string itself.
@@ -221,7 +223,7 @@ def stack(resp) -> int:
         raise NotImplementedError
     return findall('0x7ff.........', hex(resp)) != []
 
-@_sendprintf(has_regex=True)
+@_sendprintf(provide=True)
 def libc(resp: int, offset: int=None) -> int:
     '''pattern-matcher for a libc address with an offset of `offset`
     This function is _not_ integrated with libc_db; it simply does a offset check
@@ -230,7 +232,7 @@ def libc(resp: int, offset: int=None) -> int:
     '''
     return is_addr.libc(resp) and offset_match(resp, offset)
 
-@_sendprintf(has_regex=True)
+@_sendprintf(provide=True)
 def code(resp: int, offset: int=None) -> int:
     '''heuristic-based bruteforcer for non-PIE code addresses.
     Simply put, any value matching
@@ -243,7 +245,7 @@ def code(resp: int, offset: int=None) -> int:
     return findall({'i386': '0x804....', 'amd64': '0x40....'}[context.arch], hex(resp)) != [] and\
            offset_match(resp, offset)
 
-@_sendprintf(has_regex=True)
+@_sendprintf(provide=True)
 def PIE(resp: int, offset: int=None) -> int:
     '''heuristic-based bruteforcer for PIE code addresses.
     Simply put, any value matching

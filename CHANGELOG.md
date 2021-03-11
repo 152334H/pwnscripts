@@ -1,3 +1,8 @@
+#### v0.6.1dev - fsb hotfixes
+##### Changes
+ * Most bruteforcing functions under `fsb.find_offset.*` require less bytes of input now.
+ * Removed nul-byte in `fsb.leak.deref_payload`
+
 ### v0.6.0 - caching, README, cleanup
 ##### Changes
 Most changes are listed under the v0.5.*dev headers. Other changes include:

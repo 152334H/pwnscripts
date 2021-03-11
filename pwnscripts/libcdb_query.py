@@ -171,7 +171,7 @@ class libc(ELF):
     Inherrits from pwnlib.elf.elf.ELF, so all non-init methods from ELF
     will be available for this.'''
     def __init__(self, binary: str=None, id: str=None, *, db_dir: str=None, db=None):
-        '''initialise a libc database using `binary`="/path/to/libc.so.6", or with identifier `id`,
+        '''initialise a libc object using `binary`="/path/to/libc.so.6", or with identifier `id`,
         given the location `db_dir` of a local libc-database, or a libc_database() instance, `db`.
         If both `db` and `db_dir` is None, libc() will try using `context.libc_database`.
 

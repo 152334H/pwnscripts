@@ -55,9 +55,9 @@ from functools import wraps, partial
 from pwnlib.log import getLogger
 from pwnlib.util.cyclic import cyclic, cyclic_find
 from pwnlib.util.packing import p32, pack
-from pwnscripts import config
 from pwnscripts.context import context
 from pwnscripts.util import is_addr, unpack_hex, offset_match
+import pwnscripts.fsb as fsb
 log = getLogger('pwnlib.exploit')
 __all__ = ['flush_cache', 'buffer', 'canary', 'stack', 'libc', 'code', 'PIE']
 
@@ -114,7 +114,7 @@ def _getprintf(sendprintf: Callable[[bytes],bytes], cache: str) -> Generator:
     with open(cache_filename, 'r') as f:
         cache_dict = dict([map(int,l.split(':')) for l in f.read().strip().split('\n') if l])
     try:
-        for i in range(config.PRINTF_MIN, config.PRINTF_MAX):
+        for i in range(fsb.PRINTF_MIN, fsb.PRINTF_MAX):
             try:
                 if i in cache_dict: # NOTE: replace the proceeding line with something better
                     if context.log_level == 10: print('(cached) ', end='')
@@ -180,17 +180,17 @@ def buffer(sendprintf: Callable[[bytes],bytes], maxlen=20) -> int:
 
         Larger values of `maxlen` will allow for faster offset guessing.
     '''
-    # Note: if config.PRINTF_MAX becomes really large, this might break
+    # Note: if fsb.PRINTF_MAX becomes really large, this might break
     guess_n = (maxlen-len("0x%10$x\n")) // context.bytes
     # So long as more than 1 guess can be done at a time:
     if guess_n > 1:
         '''Let's say guess_n=3 words worth of cyclic() can be inputted.
-        If config.PRINTF_MIN=5, then the first payload ought to be
+        If fsb.PRINTF_MIN=5, then the first payload ought to be
             cyclic(3*context.bytes) + "0x%{}$x\n".format(5+(3-1))
         because the first guess should be able to catch any offset in the range
-            range(config.PRINTF_MIN, config.PRINTF_MIN+guess_n)
+            range(fsb.PRINTF_MIN, fsb.PRINTF_MIN+guess_n)
         '''
-        for offset in range(config.PRINTF_MIN+guess_n-1, config.PRINTF_MAX+guess_n-1, guess_n):
+        for offset in range(fsb.PRINTF_MIN+guess_n-1, fsb.PRINTF_MAX+guess_n-1, guess_n):
             payload = cyclic(guess_n*context.bytes) + "0x%{}$x\n".format(offset).encode()
             extract = sendprintf(payload)
             if b"(nil)" in extract: extract = 0

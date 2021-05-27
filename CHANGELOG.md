@@ -1,6 +1,15 @@
 #### v0.6.1dev - fsb hotfixes
 ##### Changes
+###### New
+ * Extension to `~/.pwn.conf`:
+    ```python
+    [pwnscripts]
+    libc_database=...
+    ```
+ * Removal of `pwnscripts.config`; now integrated under `fsb`
+###### Internal Changes
  * Most bruteforcing functions under `fsb.find_offset.*` require less bytes of input now.
+ * `find_offset.*` is more consistent with bytes vs str
  * Removed nul-byte in `fsb.leak.deref_payload`
 
 ### v0.6.0 - caching, README, cleanup

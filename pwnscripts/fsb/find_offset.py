@@ -104,7 +104,7 @@ def _getprintf(sendprintf: Callable[[bytes],bytes], cache: str) -> Generator:
     '''ONLY FOR INTERNAL USE
     Cached printf bruteforcing.
     Returns: generator that returns (offset, leaked_value) pairs.'''
-    try: sendprintf('testing...\n')   # This is here to update context.is_local
+    try: sendprintf(b'testing...\n')   # This is here to update context.is_local
     except Exception as e:  # We'll also do sendprintf() checking, as a bonus.
         log.error('fsb.find_offset: provided sendprintf() function raised %r' % e)
     if not path.exists(cache_filename := _get_cache_filename(cache)):
@@ -120,7 +120,7 @@ def _getprintf(sendprintf: Callable[[bytes],bytes], cache: str) -> Generator:
                     if context.log_level == 10: print('(cached) ', end='')
                 else: # This is the part where an EOFError might occur.
                     payload = '%{}$p\n'.format(i) # an unaligned printf will fail here
-                    extract = sendprintf(payload)
+                    extract = sendprintf(payload.encode())
                     if b"(nil)" in extract: cache_dict[i] = 0
                     else: cache_dict[i] = unpack_hex(extract)    # Error will be -1
                 if cache_dict[i] == -1:
